@@ -2,8 +2,7 @@
 Database Configuration for Anonymous Questions Bot
 
 Unified PostgreSQL setup using SQLAlchemy async engine.
-This module replaces the mixed SQLite/PostgreSQL approach
-with a single, consistent database configuration.
+This module includes both Questions and Settings models.
 
 Architecture:
 - PostgreSQL as primary database
@@ -96,11 +95,16 @@ async def init_db() -> None:
         async with engine.begin() as conn:
             # Import all models to ensure they're registered
             from models.questions import Question
+            from models.settings import BotSettings
+            from models.user_states import UserState  # Import user states model
             
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)
             
-        logger.info("Database initialized successfully")
+        # Initialize default settings if they don't exist
+        await _initialize_default_settings()
+            
+        logger.info("Database initialized successfully (Questions + Settings tables)")
         
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
@@ -134,3 +138,34 @@ async def check_db_connection() -> bool:
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return False
+
+
+async def _initialize_default_settings() -> None:
+    """Initialize default settings in database if they don't exist."""
+    try:
+        from models.settings import BotSettings, SettingsManager
+        
+        async with async_session() as session:
+            # Check if author_name exists
+            author_setting = await session.get(BotSettings, 'author_name')
+            if not author_setting:
+                author_setting = BotSettings(
+                    key='author_name', 
+                    value=SettingsManager.DEFAULT_SETTINGS['author_name']
+                )
+                session.add(author_setting)
+            
+            # Check if author_info exists
+            info_setting = await session.get(BotSettings, 'author_info')
+            if not info_setting:
+                info_setting = BotSettings(
+                    key='author_info',
+                    value=SettingsManager.DEFAULT_SETTINGS['author_info']
+                )
+                session.add(info_setting)
+            
+            await session.commit()
+            logger.info("Default settings initialized")
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize default settings: {e}")

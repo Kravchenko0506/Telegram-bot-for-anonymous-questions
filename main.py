@@ -1,7 +1,7 @@
 """
-Telegram Bot for Anonymous Questions - Complete Main Entry Point
+Telegram Bot for Anonymous Questions - Simplified Main Entry Point
 
-Final bot with PostgreSQL + asyncpg + aiogram 3.4.1 + Bot Menu
+Bot with only /start command and admin editing capabilities
 """
 
 import asyncio
@@ -38,27 +38,27 @@ async def setup_bot() -> tuple[Bot, Dispatcher]:
 
 
 async def setup_bot_menu(bot: Bot) -> None:
-    """Setup bot menu and commands."""
+    """Setup simplified bot menu - only /start command."""
     logger = get_bot_logger()
     
     try:
-        # Commands for regular users
+        # Only /start command for all users
         user_commands = [
             BotCommand(command="start", description="🚀 Начать работу с ботом"),
-            BotCommand(command="help", description="❓ Помощь по использованию"),
         ]
         
-        # Commands for admin
+        # Admin gets additional editing commands
         admin_commands = [
             BotCommand(command="start", description="🚀 Админ-панель"),
-            BotCommand(command="admin", description="🛠 Управление ботом"),
-            BotCommand(command="stats", description="📊 Статистика вопросов"),
-            BotCommand(command="favorites", description="⭐ Избранные вопросы"),
+            BotCommand(command="set_author", description="✏️ Изменить имя автора"),
+            BotCommand(command="set_info", description="📝 Изменить описание канала"),
+            BotCommand(command="settings", description="⚙️ Текущие настройки"),
+            BotCommand(command="stats", description="📊 Статистика"),
             BotCommand(command="pending", description="⏳ Неотвеченные вопросы"),
-            BotCommand(command="help", description="❓ Помощь"),
+            BotCommand(command="favorites", description="⭐ Избранные"),
         ]
         
-        # Set commands for all users
+        # Set commands for all users (only /start)
         await bot.set_my_commands(user_commands, BotCommandScopeDefault())
         
         # Set admin-specific commands
@@ -67,7 +67,7 @@ async def setup_bot_menu(bot: Bot) -> None:
             BotCommandScopeChat(chat_id=ADMIN_ID)
         )
         
-        logger.info("Bot menu and commands configured successfully")
+        logger.info("Simplified bot menu configured: only /start for users, editing commands for admin")
         
     except Exception as e:
         logger.error(f"Failed to setup bot menu: {e}")
@@ -81,13 +81,13 @@ async def register_handlers(dp: Dispatcher) -> None:
     1. Admin states (highest priority - interactive mode)
     2. Admin handlers (callbacks and commands)
     3. Start/help commands  
-    4. Question handlers (catch-all)
+    4. Question handlers (catch-all, must be last)
     """
     # Register handlers in order of specificity
     dp.include_router(admin_states.router)  # Admin interactive states
     dp.include_router(admin.router)         # Admin callbacks and commands
     dp.include_router(start.router)         # Start and help commands
-    dp.include_router(questions.router)     # Question processing (catch-all)
+    dp.include_router(questions.router)     # Question processing (catch-all, LAST)
     
     logger = get_bot_logger()
     logger.info("All handlers registered successfully")
@@ -101,7 +101,7 @@ async def main() -> None:
     1. Setup logging
     2. Initialize database
     3. Create bot and dispatcher
-    4. Setup bot menu
+    4. Setup simplified bot menu
     5. Register handlers
     6. Start polling
     7. Handle graceful shutdown
@@ -124,7 +124,7 @@ async def main() -> None:
         # Setup bot and dispatcher
         bot, dp = await setup_bot()
         
-        # Setup bot menu and commands
+        # Setup simplified bot menu
         await setup_bot_menu(bot)
         
         # Register handlers
@@ -133,7 +133,7 @@ async def main() -> None:
         # Get bot info
         bot_info = await bot.get_me()
         logger.info(f"Bot started: @{bot_info.username}")
-        logger.info(f"Bot menu configured for users and admin")
+        logger.info(f"Simplified menu: only /start for users, editing commands for admin")
         
         # Start bot polling
         logger.info("Bot is starting polling...")

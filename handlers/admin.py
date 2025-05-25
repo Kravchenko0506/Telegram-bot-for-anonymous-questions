@@ -14,11 +14,20 @@ from config import (
     SUCCESS_ADDED_TO_FAVORITES,
     SUCCESS_REMOVED_FROM_FAVORITES,
     SUCCESS_QUESTION_DELETED,
-    ERROR_QUESTION_NOT_FOUND
+    ERROR_QUESTION_NOT_FOUND,
+    SUCCESS_SETTING_UPDATED,
+    ERROR_SETTING_UPDATE,
+    ERROR_INVALID_VALUE,
+    BOT_USERNAME
 )
 from models.database import async_session
 from models.questions import Question
-from keyboards.inline import get_admin_question_keyboard, get_favorite_question_keyboard
+from keyboards.inline import (
+    get_admin_question_keyboard, 
+    get_favorite_question_keyboard,
+    get_stats_keyboard,
+    get_clear_confirmation_keyboard
+)
 from utils.logger import get_admin_logger
 from handlers.admin_states import (
     start_answer_mode, 
@@ -26,19 +35,41 @@ from handlers.admin_states import (
     handle_admin_answer,
     is_admin_in_answer_mode
 )
+from models.settings import SettingsManager
 
 router = Router()
 logger = get_admin_logger()
 
 
-@router.callback_query()
+@router.callback_query(lambda c: c.from_user.id == ADMIN_ID)
 async def admin_question_callback(callback: CallbackQuery):
-    """Handle admin callback queries."""
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("❌ Доступ запрещен", show_alert=True)
-        return
-    
+    """Handle admin callback queries only."""
     try:
+        # Handle special callbacks without question ID
+        if callback.data == "clear_all_questions":
+            keyboard = get_clear_confirmation_keyboard()
+            await callback.message.edit_text(
+                "⚠️ <b>Внимание!</b>\n\n"
+                "Вы собираетесь удалить <b>ВСЕ вопросы</b> из базы данных.\n"
+                "Это действие <b>необратимо</b>!\n\n"
+                "Удаленные вопросы нельзя будет восстановить.",
+                reply_markup=keyboard
+            )
+            return
+        
+        elif callback.data == "confirm_clear_all":
+            await handle_clear_all_questions(callback)
+            return
+        
+        elif callback.data == "cancel_clear":
+            await callback.message.edit_text(
+                "❌ Очистка отменена",
+                reply_markup=None
+            )
+            await callback.answer("Очистка отменена")
+            return
+        
+        # Handle question-specific callbacks
         if ":" not in callback.data:
             await callback.answer("❌ Некорректные данные", show_alert=True)
             return
@@ -111,16 +142,44 @@ async def admin_question_callback(callback: CallbackQuery):
         logger.error(f"Error in admin callback: {e}")
 
 
-@router.message()
-async def admin_message_handler(message: Message):
-    """Handle admin messages - check for answer mode first."""
-    if message.from_user.id != ADMIN_ID:
-        return
-    
-    # Check if admin is in answer mode
-    if is_admin_in_answer_mode(message.from_user.id):
-        await handle_admin_answer(message)
-        return
+async def handle_clear_all_questions(callback: CallbackQuery):
+    """Handle clearing all questions from database."""
+    try:
+        async with async_session() as session:
+            # Soft delete all questions
+            stmt = select(Question).where(Question.is_deleted == False)
+            result = await session.execute(stmt)
+            questions = result.scalars().all()
+            
+            count = 0
+            for question in questions:
+                question.is_deleted = True
+                question.deleted_at = datetime.utcnow()
+                count += 1
+            
+            await session.commit()
+        
+        await callback.message.edit_text(
+            f"✅ <b>Очистка завершена!</b>\n\n"
+            f"Удалено вопросов: {count}\n\n"
+            f"<i>Все вопросы перемещены в архив.</i>",
+            reply_markup=None
+        )
+        
+        await callback.answer(f"Удалено {count} вопросов")
+        logger.info(f"Admin cleared {count} questions")
+        
+    except Exception as e:
+        await callback.message.edit_text(
+            "❌ Ошибка при очистке вопросов",
+            reply_markup=None
+        )
+        await callback.answer("Ошибка при очистке", show_alert=True)
+        logger.error(f"Error clearing questions: {e}")
+
+
+# УБРАН общий @router.message() обработчик!
+# Теперь логика обработки состояний перенесена в questions.py
 
 
 @router.message(Command("test"))
@@ -183,7 +242,7 @@ async def admin_command(message: Message):
 3. Ответ автоматически отправится пользователю
 
 🔗 <b>Ссылка для пользователей:</b>
-<code>https://t.me/{message.bot.username}?start=channel</code>
+<code>https://t.me/{BOT_USERNAME}?start=channel</code>
 """
         
         await message.answer(admin_panel)
@@ -334,9 +393,132 @@ async def stats_command(message: Message):
 📈 Процент ответов: {response_rate:.1f}%
 """
         
-        await message.answer(stats_text)
+        keyboard = get_stats_keyboard()
+        await message.answer(stats_text, reply_markup=keyboard)
         logger.info(f"Enhanced stats viewed: total={total}, answered={answered}, rate={response_rate:.1f}%")
         
     except Exception as e:
         await message.answer("❌ Ошибка при получении статистики")
         logger.error(f"Error getting enhanced stats: {e}")
+
+
+@router.message(Command("set_author"))
+async def set_author_command(message: Message):
+    """Command to change author name."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+    
+    # Check if user provided new name
+    command_text = message.text.strip()
+    if len(command_text.split()) < 2:
+        current_name = await SettingsManager.get_author_name()
+        await message.answer(
+            f"✏️ <b>Текущее имя автора:</b> {current_name}\n\n"
+            f"Для изменения используйте:\n"
+            f"<code>/set_author Новое имя автора</code>"
+        )
+        return
+    
+    # Extract new name (everything after the command)
+    new_name = command_text[len("/set_author"):].strip()
+    
+    if not new_name:
+        await message.answer("❌ Имя автора не может быть пустым.")
+        return
+    
+    if len(new_name) > 100:
+        await message.answer("❌ Имя автора слишком длинное (максимум 100 символов).")
+        return
+    
+    try:
+        success = await SettingsManager.set_author_name(new_name)
+        if success:
+            await message.answer(
+                f"✅ <b>Имя автора обновлено!</b>\n\n"
+                f"<b>Новое значение:</b> {new_name}\n\n"
+                f"<i>Изменения будут видны новым пользователям при запуске бота.</i>"
+            )
+            logger.info(f"Admin updated author name to: {new_name}")
+        else:
+            await message.answer("❌ Ошибка при сохранении имени автора.")
+    except Exception as e:
+        await message.answer("❌ Ошибка при обновлении настройки.")
+        logger.error(f"Error updating author name: {e}")
+
+
+@router.message(Command("set_info"))
+async def set_info_command(message: Message):
+    """Command to change author info."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+    
+    # Check if user provided new info
+    command_text = message.text.strip()
+    if len(command_text.split()) < 2:
+        current_info = await SettingsManager.get_author_info()
+        await message.answer(
+            f"📝 <b>Текущее описание канала:</b> {current_info}\n\n"
+            f"Для изменения используйте:\n"
+            f"<code>/set_info Новое описание канала</code>"
+        )
+        return
+    
+    # Extract new info (everything after the command)
+    new_info = command_text[len("/set_info"):].strip()
+    
+    if not new_info:
+        await message.answer("❌ Описание канала не может быть пустым.")
+        return
+    
+    if len(new_info) > 500:
+        await message.answer("❌ Описание канала слишком длинное (максимум 500 символов).")
+        return
+    
+    try:
+        success = await SettingsManager.set_author_info(new_info)
+        if success:
+            await message.answer(
+                f"✅ <b>Описание канала обновлено!</b>\n\n"
+                f"<b>Новое значение:</b> {new_info}\n\n"
+                f"<i>Изменения будут видны новым пользователям при запуске бота.</i>"
+            )
+            logger.info(f"Admin updated author info to: {new_info}")
+        else:
+            await message.answer("❌ Ошибка при сохранении описания канала.")
+    except Exception as e:
+        await message.answer("❌ Ошибка при обновлении настройки.")
+        logger.error(f"Error updating author info: {e}")
+
+
+@router.message(Command("settings"))
+async def settings_command(message: Message):
+    """Show current bot settings."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+    
+    try:
+        author_name = await SettingsManager.get_author_name()
+        author_info = await SettingsManager.get_author_info()
+        
+        settings_text = f"""
+⚙️ <b>Текущие настройки бота</b>
+
+👤 <b>Имя автора:</b> {author_name}
+📝 <b>Описание канала:</b> {author_info}
+
+<b>Команды для изменения:</b>
+• <code>/set_author Новое имя</code>
+• <code>/set_info Новое описание</code>
+
+<i>Изменения применяются сразу для новых пользователей.</i>
+"""
+        
+        await message.answer(settings_text)
+        logger.info("Admin viewed current settings")
+        
+    except Exception as e:
+        await message.answer("❌ Ошибка при получении настроек")
+        logger.error(f"Error getting settings: {e}")

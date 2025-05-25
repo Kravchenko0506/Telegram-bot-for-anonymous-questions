@@ -43,14 +43,12 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int):
         }
         
         # Send answer prompt
-        answer_text = f"""
-💬 <b>Режим ответа на вопрос #{question_id}</b>
+        answer_text = f"""💬 <b>Режим ответа на вопрос #{question_id}</b>
 
 <b>Вопрос:</b>
 <i>{question.text}</i>
 
-📝 <b>Напишите ваш ответ:</b>
-"""
+📝 <b>Напишите ваш ответ:</b>"""
         
         from keyboards.inline import get_cancel_answer_keyboard
         keyboard = get_cancel_answer_keyboard(question_id)
@@ -108,20 +106,35 @@ async def handle_admin_answer(message: Message):
         )
         
         try:
+            # Add inline button for user to ask another question
+            from keyboards.inline import get_user_question_sent_keyboard
+            from models.user_states import UserStateManager
+            keyboard = get_user_question_sent_keyboard()
+            
+            # Combine answer with button in one message
+            user_message_with_button = USER_ANSWER_RECEIVED.format(
+                question=question_text,
+                answer=answer_text
+            ) + "\n\n💬 <b>Хотите задать еще один вопрос?</b>"
+            
             await message.bot.send_message(
                 chat_id=user_id,
-                text=user_message
+                text=user_message_with_button,
+                reply_markup=keyboard
             )
             
-            confirmation = f"""
-✅ <b>Ответ успешно отправлен!</b>
+            # Set user state to "question_sent" so they must use button for next question
+            await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
+            
+            # Success confirmation WITHOUT user ID
+            confirmation_text = f"""✅ <b>Ответ успешно отправлен!</b>
 
 <b>Вопрос:</b> {question_text[:100]}...
 <b>Ваш ответ:</b> {answer_text[:100]}...
-<b>Пользователю:</b> #{user_id}
-"""
+
+<i>Ответ доставлен пользователю анонимно</i>"""
             
-            await message.answer(confirmation)
+            await message.answer(confirmation_text)
             logger.info(f"Answer sent for question {question_id}")
             
         except Exception as e:

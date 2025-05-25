@@ -1,11 +1,11 @@
 """
-Questions Handler - Simplified Version
+Questions Handler - Fixed Version with User States
 
-Direct database operations without service layer.
+Handles user questions with state management and full anonymity.
 """
 
 from aiogram import Router
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from datetime import datetime
 import re
 
@@ -21,7 +21,12 @@ from config import (
 )
 from models.database import async_session
 from models.questions import Question
-from keyboards.inline import get_admin_question_keyboard
+from models.user_states import UserStateManager
+from keyboards.inline import (
+    get_admin_question_keyboard, 
+    get_user_question_sent_keyboard,
+    get_user_blocked_keyboard
+)
 from utils.logger import get_question_logger
 from sqlalchemy import select
 
@@ -29,16 +34,95 @@ router = Router()
 logger = get_question_logger()
 
 
+@router.callback_query()
+async def user_callback_handler(callback: CallbackQuery):
+    """Handle user callback queries."""
+    user_id = callback.from_user.id
+    
+    # Skip admin callbacks
+    if user_id == ADMIN_ID:
+        return
+    
+    if callback.data == "ask_another_question":
+        # Allow user to ask another question
+        success = await UserStateManager.allow_new_question(user_id)
+        
+        if success:
+            await callback.message.edit_text(
+                "✍️ <b>Напишите ваш новый вопрос:</b>\n\n"
+                f"<i>Максимальная длина: {MAX_QUESTION_LENGTH} символов</i>",
+                reply_markup=None
+            )
+            await callback.answer("Теперь можете написать новый вопрос")
+            logger.info(f"User {user_id} started asking new question")
+        else:
+            await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
 @router.message()
-async def question_handler(message: Message):
-    """Handle incoming questions from users."""
+async def unified_message_handler(message: Message):
+    """
+    Unified handler for all text messages with state management.
+    
+    Handles:
+    1. Admin in answer mode
+    2. Admin replies to questions  
+    3. Regular user questions (with state checks)
+    """
     user_id = message.from_user.id
     
-    # Skip admin messages
+    # Check if admin is in answer mode first
     if user_id == ADMIN_ID:
+        # Import here to avoid circular imports
+        from handlers.admin_states import is_admin_in_answer_mode, handle_admin_answer
+        
+        # Check if admin is in answer mode
+        if is_admin_in_answer_mode(user_id):
+            await handle_admin_answer(message)
+            return
+        
+        # Check if admin is replying to a question
         if message.reply_to_message:
             await handle_admin_reply(message)
+            return
+        
+        # If admin sends a regular message (not in answer mode, not reply), ignore it
+        logger.info(f"Admin {user_id} sent regular message, ignoring")
         return
+    
+    # Handle regular user messages with state management
+    await handle_user_message(message)
+
+
+async def handle_user_message(message: Message):
+    """Handle messages from regular users with state management."""
+    user_id = message.from_user.id
+    
+    # Check if user can send a question
+    can_send = await UserStateManager.can_send_question(user_id)
+    
+    if not can_send:
+        # User already sent a question and must use inline button
+        blocked_message = """
+💬 <b>Ваш предыдущий вопрос отправлен!</b>
+
+📨 Если хотите задать еще один вопрос, нажмите кнопку ниже.
+
+<i>Это сделано для предотвращения случайной отправки команд как вопросов.</i>
+"""
+        
+        keyboard = get_user_blocked_keyboard()
+        await message.answer(blocked_message, reply_markup=keyboard)
+        logger.info(f"User {user_id} blocked from sending text, must use button")
+        return
+    
+    # User can send question - process it
+    await handle_user_question(message)
+
+
+async def handle_user_question(message: Message):
+    """Handle incoming questions from users with state management."""
+    user_id = message.from_user.id
     
     # Validate message content
     if not message.text or not message.text.strip():
@@ -68,14 +152,19 @@ async def question_handler(message: Message):
             
             question_id = question.id
         
-        logger.info(f"Question saved: ID={question_id}, user_id={user_id}")
+        # Update user state to "question_sent"
+        await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
         
-        # Send notification to admin
-        admin_message = ADMIN_NEW_QUESTION.format(
-            question_id=question_id,
-            question_text=question_text,
-            created_at=datetime.now().strftime("%d.%m.%Y %H:%M")
-        )
+        logger.info(f"Question saved: ID={question_id}, user state updated")
+        
+        # Send notification to admin (WITHOUT USER ID)
+        admin_message = f"""
+❓ <b>Новый анонимный вопрос #{question_id}:</b>
+
+{question_text}
+
+<i>Отправлено: {datetime.now().strftime("%d.%m.%Y %H:%M")}</i>
+"""
         
         keyboard = get_admin_question_keyboard(question_id)
         await message.bot.send_message(
@@ -84,9 +173,19 @@ async def question_handler(message: Message):
             reply_markup=keyboard
         )
         
-        # Confirm to user
-        await message.answer(SUCCESS_QUESTION_SENT)
-        logger.info(f"Question {question_id} notifications sent successfully")
+        # Confirm to user with inline button for next question
+        success_message = f"""
+✅ <b>Ваш вопрос отправлен автору анонимно!</b>
+
+📩 Ответ придет в этот же чат, если автор решит ответить.
+
+💬 Хотите задать еще один вопрос?
+"""
+        
+        keyboard = get_user_question_sent_keyboard()
+        await message.answer(success_message, reply_markup=keyboard)
+        
+        logger.info(f"Question {question_id} processed successfully with state management")
         
     except Exception as e:
         await message.answer(ERROR_DATABASE)
@@ -94,15 +193,17 @@ async def question_handler(message: Message):
 
 
 async def handle_admin_reply(message: Message):
-    """Handle admin replies to questions."""
+    """Handle admin replies to questions (legacy reply method)."""
     reply_text = message.reply_to_message.text or ""
     if not reply_text.startswith("❓") or "вопрос #" not in reply_text:
+        logger.info("Admin reply not recognized as question reply")
         return
     
     try:
         # Extract question ID
         match = re.search(r"вопрос #(\d+):", reply_text)
         if not match:
+            logger.warning("Could not extract question ID from reply")
             return
         
         question_id = int(match.group(1))
@@ -131,12 +232,33 @@ async def handle_admin_reply(message: Message):
             )
             
             try:
+                # Add inline button for user to ask another question
+                from keyboards.inline import get_user_question_sent_keyboard
+                from models.user_states import UserStateManager
+                keyboard = get_user_question_sent_keyboard()
+                
+                # Combine answer with button in one message
+                user_message_with_button = USER_ANSWER_RECEIVED.format(
+                    question=question.text,
+                    answer=answer_text
+                ) + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
+                
                 await message.bot.send_message(
                     chat_id=question.user_id,
-                    text=user_message
+                    text=user_message_with_button,
+                    reply_markup=keyboard
                 )
-                await message.answer("✅ Ответ отправлен пользователю!")
-                logger.info(f"Answer sent for question {question_id}")
+                
+                # Set user state to "question_sent" so they must use button for next question
+                await UserStateManager.set_user_state(question.user_id, UserStateManager.STATE_QUESTION_SENT)
+                
+                # Success message WITHOUT user ID
+                await message.answer(
+                    "✅ Ответ отправлен пользователю анонимно!\n\n"
+                    f"<b>Вопрос:</b> {question.text[:100]}...\n"
+                    f"<b>Ваш ответ:</b> {answer_text[:100]}..."
+                )
+                logger.info(f"Answer sent for question {question_id} via reply")
                 
             except Exception as e:
                 await message.answer("✅ Ответ сохранен, но не удалось отправить пользователю.")

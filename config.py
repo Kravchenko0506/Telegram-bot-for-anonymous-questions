@@ -1,13 +1,8 @@
 """
 Configuration Module for Anonymous Questions Bot
 
-Updated configuration with PostgreSQL support and proper variable names.
-Fixes environment variable conflicts and adds database configuration.
-
-Security Note:
-- All sensitive data should be in .env file
-- Database credentials are loaded securely
-- Configuration validation ensures required values are present
+Updated configuration with dynamic settings support.
+Author name and info are now editable by admin through bot commands.
 """
 
 import os
@@ -77,14 +72,17 @@ MAX_ANSWER_LENGTH: int = 2000
 BOT_USERNAME: str = get_env_var("BOT_USERNAME", default="YourBot", required=False)
 """Bot username for generating links"""
 
-AUTHOR_NAME: str = get_env_var("AUTHOR_NAME", default="Автор канала", required=False)
-"""Name displayed to users when they start the bot"""
+# Dynamic settings (now managed through database)
+# These are default values, actual values are fetched from BotSettings table
 
-AUTHOR_INFO: str = get_env_var("AUTHOR_INFO", default="Здесь можно задать анонимный вопрос", required=False)
-"""Additional info about the author"""
+DEFAULT_AUTHOR_NAME: str = "Автор канала"
+"""Default author name (can be changed by admin)"""
 
-# Message Templates
-WELCOME_MESSAGE: str = """
+DEFAULT_AUTHOR_INFO: str = "Здесь можно задать анонимный вопрос"
+"""Default author info (can be changed by admin)"""
+
+# Message Templates (now use dynamic settings)
+WELCOME_MESSAGE_TEMPLATE: str = """
 👋 <b>Привет! Ты можешь анонимно задать свой вопрос автору.</b>
 
 ℹ️ <b>Автор:</b> {author_name}
@@ -95,43 +93,13 @@ WELCOME_MESSAGE: str = """
 <i>Максимальная длина вопроса: {max_length} символов</i>
 """
 
-HELP_MESSAGE: str = """
-🆘 <b>Помощь по использованию бота</b>
-
-<b>Для пользователей:</b>
-• Просто напишите ваш вопрос
-• Вопрос будет отправлен анонимно
-• Ответ придет в этот же чат (если автор ответит)
-
-<b>Команды:</b>
-/start - Начать работу с ботом
-/help - Показать это сообщение
-
-<i>Максимальная длина вопроса: {max_length} символов</i>
-"""
-
-ADMIN_HELP_MESSAGE: str = """
-🛠 <b>Админ-панель</b>
-
-<b>Доступные команды:</b>
-/admin - Показать админ-панель
-/favorites - Избранные вопросы
-/stats - Статистика вопросов
-
-<b>Работа с вопросами:</b>
-• Отвечайте на вопросы через Reply
-• Используйте кнопки для управления вопросами
-• Кнопка "Ответить" - отправить ответ пользователю
-• Кнопка "Избранное" - добавить в избранные
-• Кнопка "Удалить" - удалить вопрос
-"""
-
 # Success Messages
 SUCCESS_QUESTION_SENT: str = "✅ Ваш вопрос отправлен автору анонимно!"
 SUCCESS_ANSWER_SENT: str = "✅ Ответ отправлен пользователю!"
 SUCCESS_ADDED_TO_FAVORITES: str = "⭐ Вопрос добавлен в избранное!"
 SUCCESS_REMOVED_FROM_FAVORITES: str = "⭐ Вопрос убран из избранного!"
 SUCCESS_QUESTION_DELETED: str = "🗑️ Вопрос удален!"
+SUCCESS_SETTING_UPDATED: str = "✅ Настройка обновлена!"
 
 # Error Messages
 ERROR_MESSAGE_TOO_LONG: str = f"❌ Вопрос слишком длинный. Максимум {MAX_QUESTION_LENGTH} символов."
@@ -140,6 +108,8 @@ ERROR_ADMIN_ONLY: str = "❌ Эта команда доступна только
 ERROR_DATABASE: str = "❌ Произошла ошибка при работе с базой данных. Попробуйте позже."
 ERROR_QUESTION_NOT_FOUND: str = "❌ Вопрос не найден или уже удален."
 ERROR_ALREADY_ANSWERED: str = "❌ На этот вопрос уже был дан ответ."
+ERROR_SETTING_UPDATE: str = "❌ Ошибка при обновлении настройки."
+ERROR_INVALID_VALUE: str = "❌ Некорректное значение."
 
 # Admin Messages
 ADMIN_NEW_QUESTION: str = """
@@ -165,33 +135,6 @@ USER_ANSWER_RECEIVED: str = """
 """
 
 USER_QUESTION_PROCESSING: str = "⏳ Ваш вопрос отправлен и ожидает ответа..."
-
-
-def get_welcome_message(unique_id: Optional[str] = None) -> str:
-    """
-    Generate welcome message with current configuration.
-    
-    Args:
-        unique_id: Unique identifier from start parameter
-        
-    Returns:
-        str: Formatted welcome message
-    """
-    return WELCOME_MESSAGE.format(
-        author_name=AUTHOR_NAME,
-        author_info=AUTHOR_INFO,
-        max_length=MAX_QUESTION_LENGTH
-    )
-
-
-def get_help_message() -> str:
-    """
-    Generate help message with current configuration.
-    
-    Returns:
-        str: Formatted help message
-    """
-    return HELP_MESSAGE.format(max_length=MAX_QUESTION_LENGTH)
 
 
 def get_bot_link(unique_id: str) -> str:

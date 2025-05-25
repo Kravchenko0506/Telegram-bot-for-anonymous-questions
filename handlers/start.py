@@ -1,15 +1,15 @@
 """
-Start Command Handler for Anonymous Questions Bot
+Start Command Handler - Fixed Version
 
-Handles /start command with unique parameter support for aiogram 3.4.1.
+Only /start command with admin editing capabilities.
 """
 
 from aiogram import Router
 from aiogram.types import Message
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import CommandStart
 from aiogram.filters.command import CommandObject
 
-from config import ADMIN_ID, get_welcome_message, ADMIN_HELP_MESSAGE
+from config import ADMIN_ID, WELCOME_MESSAGE_TEMPLATE, MAX_QUESTION_LENGTH, BOT_USERNAME
 from utils.logger import get_bot_logger
 
 router = Router()
@@ -21,9 +21,8 @@ async def start_handler(message: Message, command: CommandObject):
     """
     Handle /start command with optional unique parameter.
     
-    Supports:
-    - /start - regular start for new users
-    - /start unique_id - start with tracking parameter
+    For users: Shows welcome message
+    For admin: Shows admin panel with editing commands
     """
     user_id = message.from_user.id
     unique_id = command.args if command.args else None
@@ -35,15 +34,62 @@ async def start_handler(message: Message, command: CommandObject):
     
     # Check if user is admin
     if user_id == ADMIN_ID:
-        await message.answer("🔄 <b>Админ-панель перезагружена</b>\n\nИспользуйте /admin для управления ботом")
-        logger.info(f"Admin {user_id} reloaded start")
-        logger.info(f"Admin {user_id} started the bot")
+        admin_panel = f"""
+🛠 <b>Админ-панель бота</b>
+
+📋 <b>Управление настройками:</b>
+• /set_author - Изменить имя автора
+• /set_info - Изменить описание канала
+• /settings - Просмотр текущих настроек
+
+📊 <b>Управление вопросами:</b>
+• /pending - Неотвеченные вопросы
+• /favorites - Избранные вопросы
+• /stats - Статистика
+
+🔗 <b>Ссылка для пользователей:</b>
+<code>https://t.me/{BOT_USERNAME}?start=channel</code>
+
+<i>Пользователи видят только команду /start</i>
+"""
+        
+        await message.answer(admin_panel)
+        logger.info(f"Admin {user_id} accessed simplified admin panel")
         return
     
-    # Regular user - show welcome message
-    welcome_text = get_welcome_message(unique_id)
-    
-    await message.answer(welcome_text)
+    # Regular user - show welcome message with dynamic settings
+    try:
+        # Import here to avoid circular imports
+        from models.settings import SettingsManager
+        from models.user_states import UserStateManager
+        
+        # Reset user state to idle when they use /start
+        await UserStateManager.reset_to_idle(user_id)
+        
+        author_name = await SettingsManager.get_author_name()
+        author_info = await SettingsManager.get_author_info()
+        
+        welcome_text = WELCOME_MESSAGE_TEMPLATE.format(
+            author_name=author_name,
+            author_info=author_info,
+            max_length=MAX_QUESTION_LENGTH
+        )
+        
+        await message.answer(welcome_text)
+        logger.info(f"User {user_id} got welcome with dynamic settings, state reset to idle")
+        
+    except Exception as e:
+        # Fallback to defaults if settings can't be loaded
+        logger.error(f"Error loading dynamic settings: {e}")
+        
+        fallback_message = WELCOME_MESSAGE_TEMPLATE.format(
+            author_name="Автор канала",
+            author_info="Здесь можно задать анонимный вопрос",
+            max_length=MAX_QUESTION_LENGTH
+        )
+        
+        await message.answer(fallback_message)
+        logger.warning(f"User {user_id} got fallback welcome message")
     
     # Log user start with tracking info
     if unique_id:
@@ -51,61 +97,11 @@ async def start_handler(message: Message, command: CommandObject):
     else:
         logger.info(f"User {user_id} started bot without tracking")
 
-
-@router.message(Command("help"))
-async def help_handler(message: Message):
-    """Handle /help command."""
-    user_id = message.from_user.id
-    
-    if user_id == ADMIN_ID:
-        await message.answer(ADMIN_HELP_MESSAGE)
-    else:
-        from config import WELCOME_MESSAGE, MAX_QUESTION_LENGTH
-        help_text = f"""
-🆘 <b>Помощь по использованию бота</b>
-
-<b>Для пользователей:</b>
-• Просто напишите ваш вопрос
-• Вопрос будет отправлен анонимно
-• Ответ придет в этот же чат (если автор ответит)
-
-<b>Команды:</b>
-/start - Начать работу с ботом
-/help - Показать это сообщение
-
-<i>Максимальная длина вопроса: {MAX_QUESTION_LENGTH} символов</i>
-"""
-        await message.answer(help_text)
-    
-    logger.info(f"Help requested by user {user_id}")
+# УДАЛЕНА команда /admin - она теперь только в admin.py
 
 
-@router.message(Command("admin"))
-async def admin_command_handler(message: Message):
-    """Handle /admin command - admin panel access."""
-    user_id = message.from_user.id
-    
-    if user_id != ADMIN_ID:
-        from config import ERROR_ADMIN_ONLY
-        await message.answer(ERROR_ADMIN_ONLY)
-        logger.warning(f"Non-admin user {user_id} attempted to access admin panel")
-        return
-    
-    admin_panel_text = """
-🛠 <b>Админ-панель</b>
+# УДАЛЕНО: Дублирующий обработчик @router.message(Command("admin"))
+# Теперь команда /admin обрабатывается ТОЛЬКО в handlers/admin.py
 
-<b>Доступные команды:</b>
-• /favorites - Избранные вопросы
-• /stats - Статистика вопросов
-• /pending - Неотвеченные вопросы
 
-<b>Управление вопросами:</b>
-• Отвечайте на вопросы через Reply
-• Используйте кнопки под каждым вопросом
-
-<b>Генерация ссылок:</b>
-Используйте: https://t.me/{bot_username}?start=unique_id
-""".format(bot_username=message.bot.username or "YourBot")
-    
-    await message.answer(admin_panel_text)
-    logger.info(f"Admin {user_id} accessed admin panel")
+# УДАЛЕНО: @router.message(Command("admin")) - этот обработчик теперь только в handlers/admin.py

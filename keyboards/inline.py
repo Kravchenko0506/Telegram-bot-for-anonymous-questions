@@ -35,6 +35,38 @@ def get_admin_question_keyboard(question_id: int, is_favorite: bool = False) -> 
     return keyboard
 
 
+def get_user_question_sent_keyboard() -> InlineKeyboardMarkup:
+    """Create keyboard for user after question is sent."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="❓ Задать еще вопрос",
+                    callback_data="ask_another_question"
+                )
+            ]
+        ]
+    )
+    
+    return keyboard
+
+
+def get_user_blocked_keyboard() -> InlineKeyboardMarkup:
+    """Create keyboard for user when they try to send text but are blocked."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="❓ Задать новый вопрос",
+                    callback_data="ask_another_question"
+                )
+            ]
+        ]
+    )
+    
+    return keyboard
+
+
 def get_cancel_answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
     """Create keyboard for canceling answer mode."""
     keyboard = InlineKeyboardMarkup(
@@ -161,6 +193,44 @@ def get_confirmation_keyboard(action: str, question_id: int) -> InlineKeyboardMa
                 InlineKeyboardButton(
                     text="❌ Отмена",
                     callback_data="cancel"
+                )
+            ]
+        ]
+    )
+    
+    return keyboard
+
+
+def get_stats_keyboard() -> InlineKeyboardMarkup:
+    """Create keyboard for statistics with clear option."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Очистить все вопросы",
+                    callback_data="clear_all_questions"
+                )
+            ]
+        ]
+    )
+    
+    return keyboard
+
+
+def get_clear_confirmation_keyboard() -> InlineKeyboardMarkup:
+    """Create confirmation keyboard for clearing all questions."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⚠️ Да, удалить ВСЕ вопросы",
+                    callback_data="confirm_clear_all"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="cancel_clear"
                 )
             ]
         ]
