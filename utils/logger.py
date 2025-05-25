@@ -86,6 +86,6 @@ def get_admin_logger():
 def get_question_logger():
     return question_logger
 
-bot_logger.info("Логгер 'system' успешно настроен.")
-admin_logger.info("Логгер 'trading' успешно настроен.")
-question_logger.info("Логгер 'test' успешно настроен.")
+bot_logger.info("Логгер 'bot_logger' успешно настроен.")
+admin_logger.info("admin_logger' успешно настроен.")
+question_logger.info("Логгер 'question_logger' успешно настроен.")

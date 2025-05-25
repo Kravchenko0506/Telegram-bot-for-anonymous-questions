@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+README.md
+logs/adminlogger.log
+logs/botlogger.log
+logs/questionlogger.log
+
