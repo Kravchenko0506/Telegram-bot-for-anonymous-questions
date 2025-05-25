@@ -1,20 +1,18 @@
 """
 Configuration Module for Anonymous Questions Bot
 
-Этот модуль содержит все конфигурационные параметры бота.
-Загружает настройки из переменных окружения для безопасности
-и содержит константы, используемые по всему приложению.
+Updated configuration with PostgreSQL support and proper variable names.
+Fixes environment variable conflicts and adds database configuration.
 
 Security Note:
-- Токены и чувствительные данные должны храниться в .env файле
-- Никогда не коммитьте токены в репозиторий
-- Используйте переменные окружения в продакшене
+- All sensitive data should be in .env file
+- Database credentials are loaded securely
+- Configuration validation ensures required values are present
 """
 
 import os
 from typing import Optional
 from dotenv import load_dotenv
-
 
 # Load environment variables from .env file
 load_dotenv()
@@ -53,9 +51,21 @@ TOKEN: str = get_env_var("BOT_TOKEN")
 ADMIN_ID: int = int(get_env_var("ADMIN_ID"))
 """Telegram user ID of the bot administrator"""
 
-# Database Configuration
-DB_PATH: str = get_env_var("DB_PATH", default="database/questions.db", required=False)
-"""Path to SQLite database file"""
+# Database Configuration (PostgreSQL)
+DB_USER: str = get_env_var("DB_USER", default="botanon", required=False)
+"""PostgreSQL username"""
+
+DB_PASSWORD: str = get_env_var("DB_PASSWORD", default="BotDB25052025", required=False)
+"""PostgreSQL password"""
+
+DB_HOST: str = get_env_var("DB_HOST", default="127.0.0.1", required=False)
+"""PostgreSQL host address"""
+
+DB_PORT: str = get_env_var("DB_PORT", default="5432", required=False)
+"""PostgreSQL port"""
+
+DB_NAME: str = get_env_var("DB_NAME", default="dbfrombot", required=False)
+"""PostgreSQL database name"""
 
 # Bot Settings
 MAX_QUESTION_LENGTH: int = 1000
@@ -64,14 +74,25 @@ MAX_QUESTION_LENGTH: int = 1000
 MAX_ANSWER_LENGTH: int = 2000
 """Maximum length of an answer in characters"""
 
+BOT_USERNAME: str = get_env_var("BOT_USERNAME", default="YourBot", required=False)
+"""Bot username for generating links"""
+
+AUTHOR_NAME: str = get_env_var("AUTHOR_NAME", default="Автор канала", required=False)
+"""Name displayed to users when they start the bot"""
+
+AUTHOR_INFO: str = get_env_var("AUTHOR_INFO", default="Здесь можно задать анонимный вопрос", required=False)
+"""Additional info about the author"""
+
 # Message Templates
 WELCOME_MESSAGE: str = """
-🤖 <b>Добро пожаловать в бот анонимных вопросов!</b>
+👋 <b>Привет! Ты можешь анонимно задать свой вопрос автору.</b>
 
-Здесь вы можете задать любой вопрос анонимно.
-Просто напишите свой вопрос, и администратор получит его без информации о вас.
+ℹ️ <b>Автор:</b> {author_name}
+📝 <b>О канале:</b> {author_info}
 
-<i>Отправьте любое сообщение, чтобы задать вопрос.</i>
+✍️ Просто напиши свой вопрос в ответном сообщении.
+
+<i>Максимальная длина вопроса: {max_length} символов</i>
 """
 
 HELP_MESSAGE: str = """
@@ -80,40 +101,112 @@ HELP_MESSAGE: str = """
 <b>Для пользователей:</b>
 • Просто напишите ваш вопрос
 • Вопрос будет отправлен анонимно
-• Ответ придет в этот же чат
+• Ответ придет в этот же чат (если автор ответит)
 
 <b>Команды:</b>
 /start - Начать работу с ботом
 /help - Показать это сообщение
 
 <i>Максимальная длина вопроса: {max_length} символов</i>
-""".format(max_length=MAX_QUESTION_LENGTH)
+"""
 
 ADMIN_HELP_MESSAGE: str = """
 🛠 <b>Админ-панель</b>
 
 <b>Доступные команды:</b>
 /admin - Показать админ-панель
+/favorites - Избранные вопросы
 /stats - Статистика вопросов
-/export - Экспорт всех вопросов
 
 <b>Работа с вопросами:</b>
 • Отвечайте на вопросы через Reply
 • Используйте кнопки для управления вопросами
+• Кнопка "Ответить" - отправить ответ пользователю
+• Кнопка "Избранное" - добавить в избранные
+• Кнопка "Удалить" - удалить вопрос
 """
+
+# Success Messages
+SUCCESS_QUESTION_SENT: str = "✅ Ваш вопрос отправлен автору анонимно!"
+SUCCESS_ANSWER_SENT: str = "✅ Ответ отправлен пользователю!"
+SUCCESS_ADDED_TO_FAVORITES: str = "⭐ Вопрос добавлен в избранное!"
+SUCCESS_REMOVED_FROM_FAVORITES: str = "⭐ Вопрос убран из избранного!"
+SUCCESS_QUESTION_DELETED: str = "🗑️ Вопрос удален!"
 
 # Error Messages
 ERROR_MESSAGE_TOO_LONG: str = f"❌ Вопрос слишком длинный. Максимум {MAX_QUESTION_LENGTH} символов."
 ERROR_MESSAGE_EMPTY: str = "❌ Пустое сообщение не может быть отправлено как вопрос."
 ERROR_ADMIN_ONLY: str = "❌ Эта команда доступна только администратору."
-ERROR_DATABASE: str = "❌ Произошла ошибка при работе с базой данных."
+ERROR_DATABASE: str = "❌ Произошла ошибка при работе с базой данных. Попробуйте позже."
+ERROR_QUESTION_NOT_FOUND: str = "❌ Вопрос не найден или уже удален."
+ERROR_ALREADY_ANSWERED: str = "❌ На этот вопрос уже был дан ответ."
 
-# Success Messages
-SUCCESS_QUESTION_SENT: str = "✅ Ваш вопрос отправлен администратору анонимно!"
-SUCCESS_ANSWER_SENT: str = "✅ Ответ отправлен пользователю!"
+# Admin Messages
+ADMIN_NEW_QUESTION: str = """
+❓ <b>Новый анонимный вопрос #{question_id}:</b>
+
+{question_text}
+
+<i>Отправлено: {created_at}</i>
+"""
+
+ADMIN_NO_PENDING_QUESTIONS: str = "📭 Нет неотвеченных вопросов."
+ADMIN_NO_FAVORITES: str = "⭐ Нет избранных вопросов."
+
+# User Messages  
+USER_ANSWER_RECEIVED: str = """
+💬 <b>Получен ответ на ваш вопрос:</b>
+
+<b>Ваш вопрос:</b>
+<i>{question}</i>
+
+<b>Ответ:</b>
+{answer}
+"""
+
+USER_QUESTION_PROCESSING: str = "⏳ Ваш вопрос отправлен и ожидает ответа..."
 
 
-# Validation Functions
+def get_welcome_message(unique_id: Optional[str] = None) -> str:
+    """
+    Generate welcome message with current configuration.
+    
+    Args:
+        unique_id: Unique identifier from start parameter
+        
+    Returns:
+        str: Formatted welcome message
+    """
+    return WELCOME_MESSAGE.format(
+        author_name=AUTHOR_NAME,
+        author_info=AUTHOR_INFO,
+        max_length=MAX_QUESTION_LENGTH
+    )
+
+
+def get_help_message() -> str:
+    """
+    Generate help message with current configuration.
+    
+    Returns:
+        str: Formatted help message
+    """
+    return HELP_MESSAGE.format(max_length=MAX_QUESTION_LENGTH)
+
+
+def get_bot_link(unique_id: str) -> str:
+    """
+    Generate bot link with unique start parameter.
+    
+    Args:
+        unique_id: Unique identifier for tracking
+        
+    Returns:
+        str: Complete bot link
+    """
+    return f"https://t.me/{BOT_USERNAME}?start={unique_id}"
+
+
 def validate_config() -> bool:
     """
     Validate all required configuration parameters.
@@ -133,10 +226,14 @@ def validate_config() -> bool:
         if ADMIN_ID <= 0:
             raise ValueError("ADMIN_ID must be a positive integer")
         
-        # Check database path
-        if not DB_PATH:
-            raise ValueError("DB_PATH cannot be empty")
+        # Check database configuration
+        if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+            raise ValueError("Database configuration incomplete")
         
+        # Validate numeric values
+        if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:
+            raise ValueError("Message length limits must be positive")
+            
         return True
         
     except Exception as e:
