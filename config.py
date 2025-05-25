@@ -1,16 +1,33 @@
 """
 Configuration Module for Anonymous Questions Bot
 
-Updated configuration with dynamic settings support.
-Author name and info are now editable by admin through bot commands.
+Fixed version with forced .env reload to prevent caching issues.
 """
 
 import os
 from typing import Optional
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# ПРИНУДИТЕЛЬНО загружаем .env с перезаписью существующих переменных
+load_dotenv(override=True, verbose=True)
+
+# Для отладки - показываем что загрузилось
+def _debug_env():
+    """Debug function to show loaded environment variables."""
+    token = os.getenv("BOT_TOKEN", "NOT_FOUND")
+    admin_id = os.getenv("ADMIN_ID", "NOT_FOUND") 
+    username = os.getenv("BOT_USERNAME", "NOT_FOUND")
+    
+    print(f"🔍 DEBUG: BOT_TOKEN starts with: {token[:20] if token != 'NOT_FOUND' else 'NOT_FOUND'}...")
+    print(f"🔍 DEBUG: ADMIN_ID: {admin_id}")
+    print(f"🔍 DEBUG: BOT_USERNAME: {username}")
+    
+    if token != "NOT_FOUND":
+        bot_id = token.split(':')[0]
+        print(f"🔍 DEBUG: Bot ID from token: {bot_id}")
+
+# Раскомментируйте для отладки
+_debug_env()
 
 
 def get_env_var(key: str, default: Optional[str] = None, required: bool = True) -> str:
@@ -31,6 +48,8 @@ def get_env_var(key: str, default: Optional[str] = None, required: bool = True) 
     value = os.getenv(key, default)
     
     if required and not value:
+        print(f"❌ ERROR: Environment variable '{key}' not found!")
+        print(f"📄 Available vars: {list(os.environ.keys())}")
         raise ValueError(
             f"Required environment variable '{key}' not found. "
             f"Please set it in your .env file or environment."
@@ -182,6 +201,9 @@ def validate_config() -> bool:
     except Exception as e:
         raise ValueError(f"Configuration validation failed: {e}")
 
+
+# Show final loaded values for debugging
+print(f"✅ CONFIG LOADED: Token ID = {TOKEN.split(':')[0]}, Admin = {ADMIN_ID}")
 
 # Initialize validation on import
 if __name__ != "__main__":
