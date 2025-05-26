@@ -161,11 +161,18 @@ if __name__ == "__main__":
     
     Sets up proper logging and runs the main coroutine.
     """
-    # Setup basic logging for startup
+    # Setup detailed logging for startup and debugging
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.DEBUG,  # Детальные логи
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),  # В консоль
+            logging.FileHandler('debug.log', encoding='utf-8')  # В файл debug.log
+        ]
     )
+    
+    print("🔍 DEBUG LOGGING ENABLED")
+    print("📁 Logs: console + debug.log file")
     
     try:
         asyncio.run(main())
@@ -173,4 +180,5 @@ if __name__ == "__main__":
         print("\nBot stopped by user")
     except Exception as e:
         print(f"Failed to start bot: {e}")
+        logging.exception("Critical startup error")
         exit(1)

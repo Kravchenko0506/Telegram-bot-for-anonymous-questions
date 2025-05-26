@@ -1,0 +1,23 @@
+2025-05-26 18:56:04,204 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-26 18:56:04,206 - bot - INFO - Starting Anonymous Questions Bot...
+2025-05-26 18:56:04,206 - bot - INFO - Initializing PostgreSQL database...
+2025-05-26 18:56:04,332 - models.database - INFO - Default settings initialized
+2025-05-26 18:56:04,333 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-05-26 18:56:04,335 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-05-26 18:56:04,336 - bot - INFO - Database connection verified
+2025-05-26 18:56:04,561 - bot - INFO - Simplified bot menu configured: only /start for users, editing commands for admin
+2025-05-26 18:56:04,562 - bot - INFO - All handlers registered successfully
+2025-05-26 18:56:04,600 - bot - INFO - Bot started: @Logopodskazki_bot
+2025-05-26 18:56:04,601 - bot - INFO - Simplified menu: only /start for users, editing commands for admin
+2025-05-26 18:56:04,601 - bot - INFO - Bot is starting polling...
+2025-05-26 18:56:04,602 - aiogram.dispatcher - INFO - Start polling
+2025-05-26 18:56:04,633 - aiogram.dispatcher - INFO - Run polling for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 18:56:26,474 - question_logger - INFO - User 334543329 started asking new question
+2025-05-26 18:56:26,474 - aiogram.event - INFO - Update id=704006526 is handled. Duration 281 ms by bot id=7836173794
+2025-05-26 18:56:38,012 - question_logger - INFO - Question saved: ID=10, user state updated
+2025-05-26 18:56:38,087 - question_logger - INFO - Admin notification sent for question 10
+2025-05-26 18:56:38,141 - question_logger - INFO - Question 10 processed successfully with state management
+2025-05-26 18:56:38,143 - aiogram.event - INFO - Update id=704006527 is handled. Duration 157 ms by bot id=7836173794
+2025-05-26 18:56:44,472 - admin - INFO - Admin action: answer on question 10
+2025-05-26 18:56:44,945 - admin - INFO - Admin 921752123 started answer mode for question 10
+2025-05-26 18:56:44,946 - aiogram.event - INFO - Update id=704006528 is handled. Duration 484 ms by bot id=7836173794

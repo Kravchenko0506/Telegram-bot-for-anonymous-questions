@@ -157,7 +157,7 @@ async def handle_user_question(message: Message):
         
         logger.info(f"Question saved: ID={question_id}, user state updated")
         
-        # Send notification to admin (WITHOUT USER ID)
+        # Send notification to admin (with error handling)
         admin_message = f"""
 ❓ <b>Новый анонимный вопрос #{question_id}:</b>
 
@@ -167,11 +167,17 @@ async def handle_user_question(message: Message):
 """
         
         keyboard = get_admin_question_keyboard(question_id)
-        await message.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=admin_message,
-            reply_markup=keyboard
-        )
+        
+        try:
+            await message.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=admin_message,
+                reply_markup=keyboard
+            )
+            logger.info(f"Admin notification sent for question {question_id}")
+        except Exception as admin_error:
+            logger.error(f"Failed to send admin notification: {admin_error}")
+            # Don't fail the whole process if admin notification fails
         
         # Confirm to user with inline button for next question
         success_message = f"""
