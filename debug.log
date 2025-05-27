@@ -21,3 +21,211 @@
 2025-05-26 18:56:44,472 - admin - INFO - Admin action: answer on question 10
 2025-05-26 18:56:44,945 - admin - INFO - Admin 921752123 started answer mode for question 10
 2025-05-26 18:56:44,946 - aiogram.event - INFO - Update id=704006528 is handled. Duration 484 ms by bot id=7836173794
+2025-05-26 19:18:35,449 - aiogram.dispatcher - INFO - Polling stopped
+2025-05-26 19:18:35,724 - models.database - INFO - Database engine closed successfully
+2025-05-26 19:18:35,724 - bot - INFO - Database connections closed
+2025-05-26 19:18:35,726 - aiogram.dispatcher - INFO - Polling stopped for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:20:35,055 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-26 19:20:35,055 - bot - INFO - Starting Anonymous Questions Bot...
+2025-05-26 19:20:35,055 - bot - INFO - Initializing PostgreSQL database...
+2025-05-26 19:20:35,158 - models.database - INFO - Default settings initialized
+2025-05-26 19:20:35,158 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-05-26 19:20:35,174 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-05-26 19:20:35,174 - bot - INFO - Database connection verified
+2025-05-26 19:20:35,577 - bot - INFO - Simplified bot menu configured: only /start for users, editing commands for admin
+2025-05-26 19:20:35,577 - bot - INFO - All handlers registered successfully
+2025-05-26 19:20:35,612 - bot - INFO - Bot started: @Logopodskazki_bot
+2025-05-26 19:20:35,615 - bot - INFO - Simplified menu: only /start for users, editing commands for admin
+2025-05-26 19:20:35,615 - bot - INFO - Bot is starting polling...
+2025-05-26 19:20:35,616 - aiogram.dispatcher - INFO - Start polling
+2025-05-26 19:20:35,651 - aiogram.dispatcher - INFO - Run polling for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:23:30,789 - aiogram.dispatcher - INFO - Polling stopped
+2025-05-26 19:23:31,051 - models.database - INFO - Database engine closed successfully
+2025-05-26 19:23:31,051 - bot - INFO - Database connections closed
+2025-05-26 19:23:31,051 - aiogram.dispatcher - INFO - Polling stopped for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:24:52,495 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-26 19:24:52,497 - bot - INFO - Starting Anonymous Questions Bot...
+2025-05-26 19:24:52,498 - bot - INFO - Initializing PostgreSQL database...
+2025-05-26 19:24:52,604 - models.database - INFO - Default settings initialized
+2025-05-26 19:24:52,604 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-05-26 19:24:52,604 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-05-26 19:24:52,604 - bot - INFO - Database connection verified
+2025-05-26 19:24:52,907 - bot - INFO - Simplified bot menu configured: only /start for users, editing commands for admin
+2025-05-26 19:24:52,907 - bot - INFO - All handlers registered successfully
+2025-05-26 19:24:52,951 - bot - INFO - Bot started: @Logopodskazki_bot
+2025-05-26 19:24:52,951 - bot - INFO - Simplified menu: only /start for users, editing commands for admin
+2025-05-26 19:24:52,951 - bot - INFO - Bot is starting polling...
+2025-05-26 19:24:52,956 - aiogram.dispatcher - INFO - Start polling
+2025-05-26 19:24:52,990 - aiogram.dispatcher - INFO - Run polling for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:25:42,190 - aiogram.dispatcher - INFO - Polling stopped
+2025-05-26 19:25:42,451 - models.database - INFO - Database engine closed successfully
+2025-05-26 19:25:42,451 - bot - INFO - Database connections closed
+2025-05-26 19:25:42,451 - aiogram.dispatcher - INFO - Polling stopped for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:25:49,872 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-26 19:25:49,873 - bot - INFO - Starting Anonymous Questions Bot...
+2025-05-26 19:25:49,873 - bot - INFO - Initializing PostgreSQL database...
+2025-05-26 19:25:49,965 - models.database - INFO - Default settings initialized
+2025-05-26 19:25:49,981 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-05-26 19:25:49,981 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-05-26 19:25:49,981 - bot - INFO - Database connection verified
+2025-05-26 19:25:50,291 - bot - INFO - Simplified bot menu configured: only /start for users, editing commands for admin
+2025-05-26 19:25:50,291 - bot - INFO - All handlers registered successfully
+2025-05-26 19:25:50,340 - bot - INFO - Bot started: @Logopodskazki_bot
+2025-05-26 19:25:50,340 - bot - INFO - Simplified menu: only /start for users, editing commands for admin
+2025-05-26 19:25:50,340 - bot - INFO - Bot is starting polling...
+2025-05-26 19:25:50,340 - aiogram.dispatcher - INFO - Start polling
+2025-05-26 19:25:50,374 - aiogram.dispatcher - INFO - Run polling for bot @Logopodskazki_bot id=7836173794 - 'Задай вопрос логопеду'
+2025-05-26 19:27:27,209 - bot - INFO - /start from user 334543329 without unique_id
+2025-05-26 19:27:27,456 - bot - INFO - User 334543329 got welcome with dynamic settings, state reset to idle
+2025-05-26 19:27:27,456 - bot - INFO - User 334543329 started bot without tracking
+2025-05-26 19:27:27,456 - aiogram.event - INFO - Update id=704006529 is handled. Duration 234 ms by bot id=7836173794
+2025-05-26 19:29:59,858 - bot - INFO - /start from user 921752123 without unique_id
+2025-05-26 19:29:59,992 - bot - INFO - Admin 921752123 accessed simplified admin panel
+2025-05-26 19:29:59,994 - aiogram.event - INFO - Update id=704006530 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:30:48,962 - bot - INFO - /start from user 334543329 with unique_id: channel
+2025-05-26 19:30:49,103 - bot - INFO - User 334543329 got welcome with dynamic settings, state reset to idle
+2025-05-26 19:30:49,104 - bot - INFO - User 334543329 started bot with tracking ID: channel
+2025-05-26 19:30:49,105 - aiogram.event - INFO - Update id=704006531 is handled. Duration 139 ms by bot id=7836173794
+2025-05-26 19:31:00,620 - question_logger - INFO - Question saved: ID=11, user state updated
+2025-05-26 19:31:00,698 - question_logger - INFO - Admin notification sent for question 11
+2025-05-26 19:31:00,756 - question_logger - INFO - Question 11 processed successfully with state management
+2025-05-26 19:31:00,757 - aiogram.event - INFO - Update id=704006532 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:32:59,847 - admin - INFO - Admin action: answer on question 11
+2025-05-26 19:33:00,108 - admin - INFO - Admin 921752123 started answer mode for question 11
+2025-05-26 19:33:00,110 - aiogram.event - INFO - Update id=704006533 is handled. Duration 264 ms by bot id=7836173794
+2025-05-26 19:33:19,283 - admin - DEBUG - Admin 921752123 is in answer mode for question 11
+2025-05-26 19:33:19,285 - admin - INFO - Admin 921752123 state cleared for question 11
+2025-05-26 19:33:19,295 - admin - INFO - Answer saved for question 11
+2025-05-26 19:33:19,516 - admin - INFO - Answer sent successfully for question 11
+2025-05-26 19:33:19,517 - aiogram.event - INFO - Update id=704006534 is handled. Duration 235 ms by bot id=7836173794
+2025-05-26 19:33:24,911 - question_logger - INFO - User 334543329 started asking new question
+2025-05-26 19:33:24,913 - aiogram.event - INFO - Update id=704006535 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:33:32,285 - question_logger - INFO - Question saved: ID=12, user state updated
+2025-05-26 19:33:32,401 - question_logger - INFO - Admin notification sent for question 12
+2025-05-26 19:33:32,512 - question_logger - INFO - Question 12 processed successfully with state management
+2025-05-26 19:33:32,512 - aiogram.event - INFO - Update id=704006536 is handled. Duration 250 ms by bot id=7836173794
+2025-05-26 19:33:52,242 - admin - INFO - Admin action: answer on question 12
+2025-05-26 19:33:52,549 - admin - INFO - Admin 921752123 started answer mode for question 12
+2025-05-26 19:33:52,550 - aiogram.event - INFO - Update id=704006537 is handled. Duration 297 ms by bot id=7836173794
+2025-05-26 19:33:56,990 - admin - DEBUG - Admin 921752123 is in answer mode for question 12
+2025-05-26 19:33:56,990 - admin - INFO - Admin 921752123 state cleared for question 12
+2025-05-26 19:33:56,995 - admin - INFO - Answer saved for question 12
+2025-05-26 19:33:57,146 - admin - INFO - Answer sent successfully for question 12
+2025-05-26 19:33:57,147 - aiogram.event - INFO - Update id=704006538 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:40:32,005 - aiogram.event - INFO - Update id=704006539 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:41:02,480 - aiogram.event - INFO - Update id=704006540 is handled. Duration 139 ms by bot id=7836173794
+2025-05-26 19:41:58,441 - admin - INFO - Admin updated author name to: логопед Кравченко Зоя
+2025-05-26 19:41:58,442 - aiogram.event - INFO - Update id=704006541 is handled. Duration 139 ms by bot id=7836173794
+2025-05-26 19:42:11,612 - bot - INFO - /start from user 334543329 without unique_id
+2025-05-26 19:42:11,766 - bot - INFO - User 334543329 got welcome with dynamic settings, state reset to idle
+2025-05-26 19:42:11,767 - bot - INFO - User 334543329 started bot without tracking
+2025-05-26 19:42:11,768 - aiogram.event - INFO - Update id=704006542 is handled. Duration 157 ms by bot id=7836173794
+2025-05-26 19:42:12,202 - admin - INFO - Admin viewed current settings
+2025-05-26 19:42:12,203 - aiogram.event - INFO - Update id=704006543 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:48:19,616 - admin - INFO - Admin viewed current settings
+2025-05-26 19:48:19,618 - aiogram.event - INFO - Update id=704006544 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:48:25,191 - admin - INFO - Stats command from user 921752123
+2025-05-26 19:48:25,269 - admin - INFO - Enhanced stats viewed: total=12, answered=6, rate=50.0%
+2025-05-26 19:48:25,270 - aiogram.event - INFO - Update id=704006545 is handled. Duration 78 ms by bot id=7836173794
+2025-05-26 19:48:42,750 - admin - INFO - Admin viewed 1 favorite questions with buttons
+2025-05-26 19:48:42,751 - aiogram.event - INFO - Update id=704006546 is handled. Duration 187 ms by bot id=7836173794
+2025-05-26 19:48:55,376 - bot - INFO - /start from user 921752123 without unique_id
+2025-05-26 19:48:55,432 - bot - INFO - Admin 921752123 accessed simplified admin panel
+2025-05-26 19:48:55,434 - aiogram.event - INFO - Update id=704006547 is handled. Duration 62 ms by bot id=7836173794
+2025-05-26 19:51:02,843 - admin - INFO - Admin viewed 1 favorite questions with buttons
+2025-05-26 19:51:02,843 - aiogram.event - INFO - Update id=704006548 is handled. Duration 235 ms by bot id=7836173794
+2025-05-26 19:51:28,335 - admin - INFO - Admin action: favorite on question 12
+2025-05-26 19:51:28,501 - aiogram.event - INFO - Update id=704006549 is handled. Duration 156 ms by bot id=7836173794
+2025-05-26 19:51:34,886 - admin - INFO - Admin viewed 2 favorite questions with buttons
+2025-05-26 19:51:34,887 - aiogram.event - INFO - Update id=704006550 is handled. Duration 187 ms by bot id=7836173794
+2025-05-26 19:51:47,385 - admin - INFO - Admin action: answer on question 12
+2025-05-26 19:51:47,466 - aiogram.event - INFO - Update id=704006551 is handled. Duration 77 ms by bot id=7836173794
+2025-05-26 19:51:50,906 - admin - INFO - Admin action: answer on question 4
+2025-05-26 19:51:50,981 - aiogram.event - INFO - Update id=704006552 is handled. Duration 77 ms by bot id=7836173794
+2025-05-26 19:52:08,891 - question_logger - INFO - Question saved: ID=13, user state updated
+2025-05-26 19:52:09,049 - question_logger - INFO - Admin notification sent for question 13
+2025-05-26 19:52:09,107 - question_logger - INFO - Question 13 processed successfully with state management
+2025-05-26 19:52:09,108 - aiogram.event - INFO - Update id=704006553 is handled. Duration 233 ms by bot id=7836173794
+2025-05-26 19:52:11,816 - admin - INFO - Admin action: favorite on question 13
+2025-05-26 19:52:12,013 - aiogram.event - INFO - Update id=704006554 is handled. Duration 203 ms by bot id=7836173794
+2025-05-26 19:52:14,509 - admin - INFO - Admin action: answer on question 13
+2025-05-26 19:52:14,626 - admin - INFO - Admin 921752123 started answer mode for question 13
+2025-05-26 19:52:14,627 - aiogram.event - INFO - Update id=704006555 is handled. Duration 108 ms by bot id=7836173794
+2025-05-26 19:52:27,784 - admin - INFO - Admin viewed 3 favorite questions with buttons
+2025-05-26 19:52:27,785 - aiogram.event - INFO - Update id=704006556 is handled. Duration 562 ms by bot id=7836173794
+2025-05-26 19:52:30,333 - admin - INFO - Admin action: answer on question 4
+2025-05-26 19:52:30,416 - aiogram.event - INFO - Update id=704006557 is handled. Duration 93 ms by bot id=7836173794
+2025-05-26 19:52:50,027 - question_logger - INFO - User 334543329 blocked from sending text, must use button
+2025-05-26 19:52:50,028 - aiogram.event - INFO - Update id=704006558 is handled. Duration 125 ms by bot id=7836173794
+2025-05-26 19:53:09,029 - question_logger - INFO - User 334543329 started asking new question
+2025-05-26 19:53:09,030 - aiogram.event - INFO - Update id=704006559 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:53:17,492 - question_logger - INFO - Question saved: ID=14, user state updated
+2025-05-26 19:53:17,554 - question_logger - INFO - Admin notification sent for question 14
+2025-05-26 19:53:17,625 - question_logger - INFO - Question 14 processed successfully with state management
+2025-05-26 19:53:17,626 - aiogram.event - INFO - Update id=704006560 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:53:20,095 - admin - INFO - Admin action: favorite on question 14
+2025-05-26 19:53:20,190 - aiogram.event - INFO - Update id=704006561 is handled. Duration 93 ms by bot id=7836173794
+2025-05-26 19:53:27,681 - admin - INFO - Admin viewed 4 favorite questions with buttons
+2025-05-26 19:53:27,682 - aiogram.event - INFO - Update id=704006562 is handled. Duration 296 ms by bot id=7836173794
+2025-05-26 19:53:29,440 - admin - INFO - Admin action: answer on question 4
+2025-05-26 19:53:29,484 - aiogram.event - INFO - Update id=704006563 is handled. Duration 46 ms by bot id=7836173794
+2025-05-26 19:54:36,558 - bot - INFO - /start from user 921752123 without unique_id
+2025-05-26 19:54:36,788 - bot - INFO - Admin 921752123 accessed simplified admin panel
+2025-05-26 19:54:36,788 - aiogram.event - INFO - Update id=704006564 is handled. Duration 235 ms by bot id=7836173794
+2025-05-26 19:54:46,690 - admin - INFO - Admin viewed 4 favorite questions with buttons
+2025-05-26 19:54:46,691 - aiogram.event - INFO - Update id=704006565 is handled. Duration 312 ms by bot id=7836173794
+2025-05-26 19:54:57,171 - admin - INFO - Admin action: answer on question 13
+2025-05-26 19:54:57,176 - admin - WARNING - Admin 921752123 already in answer mode, clearing previous state
+2025-05-26 19:54:57,314 - admin - INFO - Admin 921752123 started answer mode for question 13
+2025-05-26 19:54:57,315 - aiogram.event - INFO - Update id=704006566 is handled. Duration 139 ms by bot id=7836173794
+2025-05-26 19:55:05,692 - admin - DEBUG - Admin 921752123 is in answer mode for question 13
+2025-05-26 19:55:05,693 - admin - INFO - Admin 921752123 state cleared for question 13
+2025-05-26 19:55:05,698 - admin - INFO - Answer saved for question 13
+2025-05-26 19:55:05,841 - admin - INFO - Answer sent successfully for question 13
+2025-05-26 19:55:05,843 - aiogram.event - INFO - Update id=704006567 is handled. Duration 156 ms by bot id=7836173794
+2025-05-26 19:55:55,252 - question_logger - INFO - User 334543329 blocked from sending text, must use button
+2025-05-26 19:55:55,252 - aiogram.event - INFO - Update id=704006568 is handled. Duration 141 ms by bot id=7836173794
+2025-05-26 19:56:32,114 - question_logger - INFO - User 334543329 started asking new question
+2025-05-26 19:56:32,115 - aiogram.event - INFO - Update id=704006569 is handled. Duration 281 ms by bot id=7836173794
+2025-05-26 19:56:41,886 - question_logger - INFO - Question saved: ID=15, user state updated
+2025-05-26 19:56:41,977 - question_logger - INFO - Admin notification sent for question 15
+2025-05-26 19:56:42,043 - question_logger - INFO - Question 15 processed successfully with state management
+2025-05-26 19:56:42,044 - aiogram.event - INFO - Update id=704006570 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:56:48,012 - admin - INFO - Admin action: favorite on question 15
+2025-05-26 19:56:48,106 - aiogram.event - INFO - Update id=704006571 is handled. Duration 92 ms by bot id=7836173794
+2025-05-26 19:56:52,322 - admin - INFO - Admin viewed 5 favorite questions with buttons
+2025-05-26 19:56:52,322 - aiogram.event - INFO - Update id=704006572 is handled. Duration 406 ms by bot id=7836173794
+2025-05-26 19:57:06,748 - admin - INFO - Admin action: answer on question 15
+2025-05-26 19:57:06,855 - admin - INFO - Admin 921752123 started answer mode for question 15
+2025-05-26 19:57:06,857 - aiogram.event - INFO - Update id=704006573 is handled. Duration 108 ms by bot id=7836173794
+2025-05-26 19:57:19,666 - admin - DEBUG - Admin 921752123 is in answer mode for question 15
+2025-05-26 19:57:19,667 - admin - INFO - Admin 921752123 state cleared for question 15
+2025-05-26 19:57:19,671 - admin - INFO - Answer saved for question 15
+2025-05-26 19:57:19,975 - admin - INFO - Answer sent successfully for question 15
+2025-05-26 19:57:19,976 - aiogram.event - INFO - Update id=704006574 is handled. Duration 311 ms by bot id=7836173794
+2025-05-26 19:58:04,681 - bot - INFO - /start from user 921752123 without unique_id
+2025-05-26 19:58:04,811 - bot - INFO - Admin 921752123 accessed simplified admin panel
+2025-05-26 19:58:04,813 - aiogram.event - INFO - Update id=704006575 is handled. Duration 125 ms by bot id=7836173794
+2025-05-26 19:58:11,867 - admin - INFO - Admin viewed 5 favorite questions with buttons
+2025-05-26 19:58:11,868 - aiogram.event - INFO - Update id=704006576 is handled. Duration 406 ms by bot id=7836173794
+2025-05-26 19:58:20,733 - admin - INFO - Admin action: answer on question 14
+2025-05-26 19:58:20,841 - admin - INFO - Admin 921752123 started answer mode for question 14
+2025-05-26 19:58:20,842 - aiogram.event - INFO - Update id=704006577 is handled. Duration 110 ms by bot id=7836173794
+2025-05-26 19:58:31,160 - admin - DEBUG - Admin 921752123 is in answer mode for question 14
+2025-05-26 19:58:31,160 - admin - INFO - Admin 921752123 state cleared for question 14
+2025-05-26 19:58:31,164 - admin - INFO - Answer saved for question 14
+2025-05-26 19:58:31,319 - admin - INFO - Answer sent successfully for question 14
+2025-05-26 19:58:31,321 - aiogram.event - INFO - Update id=704006578 is handled. Duration 172 ms by bot id=7836173794
+2025-05-26 19:58:46,379 - admin - INFO - Admin action: remove_favorite on question 4
+2025-05-26 19:58:46,657 - aiogram.event - INFO - Update id=704006579 is handled. Duration 281 ms by bot id=7836173794
+2025-05-26 19:58:47,703 - admin - INFO - Admin action: remove_favorite on question 12
+2025-05-26 19:58:47,875 - aiogram.event - INFO - Update id=704006580 is handled. Duration 171 ms by bot id=7836173794
+2025-05-26 19:58:49,937 - admin - INFO - Admin action: remove_favorite on question 13
+2025-05-26 19:58:50,102 - aiogram.event - INFO - Update id=704006581 is handled. Duration 171 ms by bot id=7836173794
+2025-05-26 19:58:52,132 - admin - INFO - Admin action: remove_favorite on question 14
+2025-05-26 19:58:52,229 - aiogram.event - INFO - Update id=704006582 is handled. Duration 92 ms by bot id=7836173794
+2025-05-26 19:58:53,031 - admin - INFO - Admin action: remove_favorite on question 15
+2025-05-26 19:58:53,146 - aiogram.event - INFO - Update id=704006583 is handled. Duration 110 ms by bot id=7836173794
+2025-05-26 19:59:40,160 - bot - INFO - /start from user 921752123 without unique_id
+2025-05-26 19:59:40,344 - bot - INFO - Admin 921752123 accessed simplified admin panel
+2025-05-26 19:59:40,344 - aiogram.event - INFO - Update id=704006584 is handled. Duration 187 ms by bot id=7836173794
