@@ -1,5 +1,5 @@
 """
-Enhanced Admin Handlers with Interactive Features
+Admin Handlers with Interactive Features
 """
 
 from aiogram import Router

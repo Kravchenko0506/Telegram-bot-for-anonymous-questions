@@ -1,5 +1,5 @@
 """
-Admin States - Robust Version with Error Protection
+Admin States - with Error Protection
 """
 
 from aiogram import Router

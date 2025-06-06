@@ -4,10 +4,10 @@ import os
 from logging.handlers import RotatingFileHandler
 
 LOG_DIR = "logs"
-# Убедимся, что директория для логов существует
+
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# --- Общая функция для настройки логгеров ---
+# --- General function for configuring loggers ---
 def configure_logger(
     logger_name: str,
     log_file: str,
@@ -15,7 +15,7 @@ def configure_logger(
     formatter_string: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     max_bytes: int = 5 * 1024 * 1024,  # 5 MB
     backup_count: int = 5,
-    add_console_handler: bool = False  # По умолчанию не добавляем консольный вывод для всех логгеров
+    add_console_handler: bool = False  # By default, we do not add console output for all loggers.
 ):
     """
     Configures and returns a logger instance with file rotation.
@@ -33,7 +33,7 @@ def configure_logger(
     )
 
     if not has_file_handler_for_this_file:
-        # Файловый обработчик с ротацией
+        # File processor with rotation
         file_handler = RotatingFileHandler(
             log_file,
             maxBytes=max_bytes,
@@ -50,7 +50,7 @@ def configure_logger(
             console_formatter = logging.Formatter(formatter_string if formatter_string else '%(levelname)s: %(message)s')
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(console_formatter)
-            console_handler.setLevel(level) # Уровень для консоли может быть таким же или другим
+            console_handler.setLevel(level) 
             logger.addHandler(console_handler)
             
     return logger
@@ -64,14 +64,14 @@ bot_logger = configure_logger(
     formatter_string='%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s' # Добавим номер строки
 )
 admin_logger = configure_logger(
-    logger_name="admin", # или "trading_log", если ты использовал это имя
+    logger_name="admin", 
     log_file=os.path.join(LOG_DIR, "adminlogger.log"),
     level=logging.DEBUG,
     add_console_handler=True 
 )
 
 question_logger = configure_logger(
-    logger_name="question_logger", # или "trading_log", если ты использовал это имя
+    logger_name="question_logger", 
     log_file=os.path.join(LOG_DIR, "questionlogger.log"),
     level=logging.DEBUG,
     add_console_handler=True 
@@ -87,5 +87,5 @@ def get_question_logger():
     return question_logger
 
 bot_logger.info("Логгер 'bot_logger' успешно настроен.")
-admin_logger.info("admin_logger' успешно настроен.")
+admin_logger.info("Логгер admin_logger' успешно настроен.")
 question_logger.info("Логгер 'question_logger' успешно настроен.")

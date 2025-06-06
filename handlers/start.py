@@ -1,6 +1,4 @@
 """
-Start Command Handler - Fixed Version
-
 Only /start command with admin editing capabilities.
 """
 
@@ -97,11 +95,3 @@ async def start_handler(message: Message, command: CommandObject):
     else:
         logger.info(f"User {user_id} started bot without tracking")
 
-# УДАЛЕНА команда /admin - она теперь только в admin.py
-
-
-# УДАЛЕНО: Дублирующий обработчик @router.message(Command("admin"))
-# Теперь команда /admin обрабатывается ТОЛЬКО в handlers/admin.py
-
-
-# УДАЛЕНО: @router.message(Command("admin")) - этот обработчик теперь только в handlers/admin.py
