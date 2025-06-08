@@ -1,10 +1,9 @@
 __pycache__/
 *.pyc
+*.env
 .env
 README.md
 logs/adminlogger.log
 logs/botlogger.log
 logs/questionlogger.log
-Files
-Tests
-debug.log
+
