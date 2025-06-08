@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+*.env
 .env
 README.md
 logs/adminlogger.log

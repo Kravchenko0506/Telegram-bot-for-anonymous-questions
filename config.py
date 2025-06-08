@@ -57,6 +57,13 @@ def get_env_var(key: str, default: Optional[str] = None, required: bool = True) 
     
     return value
 
+def get_env_int(key: str, default: Optional[int] = None, required: bool = True) -> int:
+    """Get environment variable as integer."""
+    value = get_env_var(key, str(default) if default is not None else None, required)
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(f"Environment variable '{key}' must be an integer")
 
 # Bot Configuration
 TOKEN: str = get_env_var("BOT_TOKEN")
@@ -66,30 +73,37 @@ ADMIN_ID: int = int(get_env_var("ADMIN_ID"))
 """Telegram user ID of the bot administrator"""
 
 # Database Configuration (PostgreSQL)
-DB_USER: str = get_env_var("DB_USER", default="botanon", required=False)
+DB_USER: str = get_env_var("DB_USER")
 """PostgreSQL username"""
 
-DB_PASSWORD: str = get_env_var("DB_PASSWORD", default="BotDB25052025", required=False)
+DB_PASSWORD: str = get_env_var("DB_PASSWORD",)
 """PostgreSQL password"""
 
-DB_HOST: str = get_env_var("DB_HOST", default="127.0.0.1", required=False)
+DB_HOST: str = get_env_var("DB_HOST")
 """PostgreSQL host address"""
 
-DB_PORT: str = get_env_var("DB_PORT", default="5432", required=False)
+DB_PORT: str = get_env_var("DB_PORT")
 """PostgreSQL port"""
 
-DB_NAME: str = get_env_var("DB_NAME", default="dbfrombot", required=False)
+DB_NAME: str = get_env_var("DB_NAME")
 """PostgreSQL database name"""
 
 # Bot Settings
-MAX_QUESTION_LENGTH: int = 1000
+MAX_QUESTION_LENGTH: int = 2500
 """Maximum length of a question in characters"""
 
 MAX_ANSWER_LENGTH: int = 2000
 """Maximum length of an answer in characters"""
 
-BOT_USERNAME: str = get_env_var("BOT_USERNAME", default="YourBot", required=False)
+BOT_USERNAME: str = get_env_var("BOT_USERNAME")
 """Bot username for generating links"""
+
+# Security Settings
+RATE_LIMIT_QUESTIONS_PER_HOUR: int = get_env_int("RATE_LIMIT_QUESTIONS_PER_HOUR", default=5, required=False)
+"""Maximum questions per hour from one user"""
+
+RATE_LIMIT_COOLDOWN_SECONDS: int = get_env_int("RATE_LIMIT_COOLDOWN_SECONDS", default=30, required=False)
+"""Minimum seconds between questions from same user"""
 
 # Dynamic settings (now managed through database)
 # These are default values, actual values are fetched from BotSettings table
@@ -102,12 +116,12 @@ DEFAULT_AUTHOR_INFO: str = "Здесь можно задать анонимны�
 
 # Message Templates (now use dynamic settings)
 WELCOME_MESSAGE_TEMPLATE: str = """
-👋 <b>Привет! Ты можешь анонимно задать свой вопрос автору.</b>
+👋 <b>Привет! Вы можете анонимно задать свой вопрос автору.</b>
 
 ℹ️ <b>Автор:</b> {author_name}
 📝 <b>О канале:</b> {author_info}
 
-✍️ Просто напиши свой вопрос в ответном сообщении.
+✍️ Просто напишите свой вопрос в ответном сообщении.
 
 <i>Максимальная длина вопроса: {max_length} символов</i>
 """
