@@ -1,33 +1,16 @@
 """
 Configuration Module for Anonymous Questions Bot
 
-Fixed version with forced .env reload to prevent caching issues.
+Secure version without hardcoded secrets.
+All sensitive data must be provided via environment variables.
 """
 
 import os
 from typing import Optional
 from dotenv import load_dotenv
 
-# Forcefully load .env with overwriting existing variables
-load_dotenv(override=True, verbose=True)
-
-# For debugging - we show what has been loaded
-def _debug_env():
-    """Debug function to show loaded environment variables."""
-    token = os.getenv("BOT_TOKEN", "NOT_FOUND")
-    admin_id = os.getenv("ADMIN_ID", "NOT_FOUND") 
-    username = os.getenv("BOT_USERNAME", "NOT_FOUND")
-    
-    print(f"🔍 DEBUG: BOT_TOKEN starts with: {token[:20] if token != 'NOT_FOUND' else 'NOT_FOUND'}...")
-    print(f"🔍 DEBUG: ADMIN_ID: {admin_id}")
-    print(f"🔍 DEBUG: BOT_USERNAME: {username}")
-    
-    if token != "NOT_FOUND":
-        bot_id = token.split(':')[0]
-        print(f"🔍 DEBUG: Bot ID from token: {bot_id}")
-
-# Раскомментируйте для отладки
-_debug_env()
+# Load environment variables from .env file
+load_dotenv(override=True)
 
 
 def get_env_var(key: str, default: Optional[str] = None, required: bool = True) -> str:
@@ -48,59 +31,80 @@ def get_env_var(key: str, default: Optional[str] = None, required: bool = True) 
     value = os.getenv(key, default)
     
     if required and not value:
-        print(f"❌ ERROR: Environment variable '{key}' not found!")
-        print(f"📄 Available vars: {list(os.environ.keys())}")
         raise ValueError(
             f"Required environment variable '{key}' not found. "
-            f"Please set it in your .env file or environment."
+            f"Please set it in your .env file or environment. "
+            f"See .env.example for reference."
         )
     
     return value
 
 
-# Bot Configuration
+def get_env_int(key: str, default: Optional[int] = None, required: bool = True) -> int:
+    """Get environment variable as integer."""
+    value = get_env_var(key, str(default) if default is not None else None, required)
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(f"Environment variable '{key}' must be an integer")
+
+
+# Bot Configuration - REQUIRED
 TOKEN: str = get_env_var("BOT_TOKEN")
 """Telegram Bot API token from @BotFather"""
 
-ADMIN_ID: int = int(get_env_var("ADMIN_ID"))
+ADMIN_ID: int = get_env_int("ADMIN_ID")
 """Telegram user ID of the bot administrator"""
 
-# Database Configuration (PostgreSQL)
-DB_USER: str = get_env_var("DB_USER", default="botanon", required=False)
+BOT_USERNAME: str = get_env_var("BOT_USERNAME")
+"""Bot username for generating links (without @)"""
+
+# Database Configuration - REQUIRED
+DB_USER: str = get_env_var("DB_USER")
 """PostgreSQL username"""
 
-DB_PASSWORD: str = get_env_var("DB_PASSWORD", default="BotDB25052025", required=False)
-"""PostgreSQL password"""
+DB_PASSWORD: str = get_env_var("DB_PASSWORD")
+"""PostgreSQL password - NEVER commit real passwords!"""
 
-DB_HOST: str = get_env_var("DB_HOST", default="127.0.0.1", required=False)
+DB_HOST: str = get_env_var("DB_HOST")
 """PostgreSQL host address"""
 
-DB_PORT: str = get_env_var("DB_PORT", default="5432", required=False)
+DB_PORT: str = get_env_var("DB_PORT")
 """PostgreSQL port"""
 
-DB_NAME: str = get_env_var("DB_NAME", default="dbfrombot", required=False)
+DB_NAME: str = get_env_var("DB_NAME")
 """PostgreSQL database name"""
 
-# Bot Settings
-MAX_QUESTION_LENGTH: int = 1000
+# Bot Settings - OPTIONAL with safe defaults
+MAX_QUESTION_LENGTH: int = get_env_int("MAX_QUESTION_LENGTH", default=1000, required=False)
 """Maximum length of a question in characters"""
 
-MAX_ANSWER_LENGTH: int = 2000
+MAX_ANSWER_LENGTH: int = get_env_int("MAX_ANSWER_LENGTH", default=2000, required=False)
 """Maximum length of an answer in characters"""
 
-BOT_USERNAME: str = get_env_var("BOT_USERNAME", default="YourBot", required=False)
-"""Bot username for generating links"""
+# Logging Configuration
+LOG_LEVEL: str = get_env_var("LOG_LEVEL", default="INFO", required=False)
+"""Logging level: DEBUG, INFO, WARNING, ERROR"""
 
-# Dynamic settings (now managed through database)
-# These are default values, actual values are fetched from BotSettings table
+# Security Settings
+RATE_LIMIT_QUESTIONS_PER_HOUR: int = get_env_int("RATE_LIMIT_QUESTIONS_PER_HOUR", default=5, required=False)
+"""Maximum questions per hour from one user"""
 
+RATE_LIMIT_COOLDOWN_SECONDS: int = get_env_int("RATE_LIMIT_COOLDOWN_SECONDS", default=30, required=False)
+"""Minimum seconds between questions from same user"""
+
+# Optional: External Services
+SENTRY_DSN: Optional[str] = get_env_var("SENTRY_DSN", default=None, required=False)
+"""Sentry DSN for error tracking (optional)"""
+
+# Dynamic settings defaults (stored in database)
 DEFAULT_AUTHOR_NAME: str = "Автор канала"
 """Default author name (can be changed by admin)"""
 
 DEFAULT_AUTHOR_INFO: str = "Здесь можно задать анонимный вопрос"
 """Default author info (can be changed by admin)"""
 
-# Message Templates (now use dynamic settings)
+# Message Templates
 WELCOME_MESSAGE_TEMPLATE: str = """
 👋 <b>Привет! Ты можешь анонимно задать свой вопрос автору.</b>
 
@@ -129,6 +133,7 @@ ERROR_QUESTION_NOT_FOUND: str = "❌ Вопрос не найден или уж�
 ERROR_ALREADY_ANSWERED: str = "❌ На этот вопрос уже был дан ответ."
 ERROR_SETTING_UPDATE: str = "❌ Ошибка при обновлении настройки."
 ERROR_INVALID_VALUE: str = "❌ Некорректное значение."
+ERROR_RATE_LIMIT: str = "❌ Слишком много вопросов. Попробуйте через {seconds} секунд."
 
 # Admin Messages
 ADMIN_NEW_QUESTION: str = """
@@ -179,32 +184,44 @@ def validate_config() -> bool:
     Raises:
         ValueError: If any required parameter is invalid
     """
-    try:
-        # Check if TOKEN is valid (basic format check)
-        if not TOKEN or len(TOKEN.split(':')) != 2:
-            raise ValueError("Invalid BOT_TOKEN format")
-        
-        # Check if ADMIN_ID is valid
-        if ADMIN_ID <= 0:
-            raise ValueError("ADMIN_ID must be a positive integer")
-        
-        # Check database configuration
-        if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-            raise ValueError("Database configuration incomplete")
-        
-        # Validate numeric values
-        if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:
-            raise ValueError("Message length limits must be positive")
-            
-        return True
-        
-    except Exception as e:
-        raise ValueError(f"Configuration validation failed: {e}")
+    errors = []
+    
+    # Check if TOKEN is valid (basic format check)
+    if not TOKEN or len(TOKEN.split(':')) != 2:
+        errors.append("Invalid BOT_TOKEN format")
+    
+    # Check if ADMIN_ID is valid
+    if ADMIN_ID <= 0:
+        errors.append("ADMIN_ID must be a positive integer")
+    
+    # Check database configuration
+    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+        errors.append("Database configuration incomplete")
+    
+    # Validate numeric values
+    if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:
+        errors.append("Message length limits must be positive")
+    
+    # Validate rate limits
+    if RATE_LIMIT_QUESTIONS_PER_HOUR <= 0:
+        errors.append("Rate limit must be positive")
+    
+    if RATE_LIMIT_COOLDOWN_SECONDS <= 0:
+        errors.append("Cooldown must be positive")
+    
+    if errors:
+        error_message = "Configuration validation failed:\n" + "\n".join(f"- {e}" for e in errors)
+        raise ValueError(error_message)
+    
+    return True
 
-
-# Show final loaded values for debugging
-print(f"✅ CONFIG LOADED: Token ID = {TOKEN.split(':')[0]}, Admin = {ADMIN_ID}")
 
 # Initialize validation on import
 if __name__ != "__main__":
-    validate_config()
+    try:
+        validate_config()
+    except ValueError as e:
+        print(f"❌ Configuration Error:\n{e}")
+        print("\n📋 Please check your .env file and ensure all required variables are set.")
+        print("See .env.example for reference.")
+        raise
