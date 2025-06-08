@@ -468,3 +468,24 @@
 2025-06-09 00:32:37,652 - admin - INFO - Admin action: cancel_answer on question 20
 2025-06-09 00:32:37,957 - admin - INFO - Admin 334543329 canceled answer mode for question 20
 2025-06-09 00:32:38,009 - aiogram.event - INFO - Update id=120544888 is handled. Duration 360 ms by bot id=7979066799
+2025-06-09 01:01:17,691 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-06-09 01:01:17,692 - bot - INFO - Starting Anonymous Questions Bot...
+2025-06-09 01:01:17,693 - bot - INFO - Initializing PostgreSQL database...
+2025-06-09 01:01:18,008 - models.database - INFO - Default settings initialized
+2025-06-09 01:01:18,010 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 01:01:18,012 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 01:01:18,014 - bot - INFO - Database connection verified
+2025-06-09 01:01:18,517 - bot - INFO - Simplified bot menu configured: only /start for users, editing commands for admin
+2025-06-09 01:01:18,518 - bot - INFO - All handlers registered successfully
+2025-06-09 01:01:18,578 - bot - INFO - Bot started: @LogopodskazkiTest_bot
+2025-06-09 01:01:18,581 - bot - INFO - Simplified menu: only /start for users, editing commands for admin
+2025-06-09 01:01:18,583 - bot - INFO - Bot is starting polling...
+2025-06-09 01:01:18,585 - aiogram.dispatcher - INFO - Start polling
+2025-06-09 01:01:18,724 - aiogram.dispatcher - INFO - Run polling for bot @LogopodskazkiTest_bot id=7979066799 - 'Logopodskazki_test'
+2025-06-09 01:01:25,016 - bot - INFO - /start from user 334543329 without unique_id
+2025-06-09 01:01:25,445 - bot - INFO - Admin 334543329 accessed simplified admin panel
+2025-06-09 01:01:25,447 - aiogram.event - INFO - Update id=120544889 is handled. Duration 422 ms by bot id=7979066799
+2025-06-09 01:01:28,760 - admin - INFO - Stats command from user 334543329
+2025-06-09 01:01:28,963 - admin - INFO - Enhanced stats viewed: total=2, answered=0, rate=0.0%
+2025-06-09 01:01:28,965 - aiogram.event - INFO - Update id=120544890 is handled. Duration 202 ms by bot id=7979066799
+2025-06-09 01:01:33,058 - aiogram.event - INFO - Update id=120544891 is handled. Duration 188 ms by bot id=7979066799
