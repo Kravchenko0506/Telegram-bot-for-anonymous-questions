@@ -1,6 +1,4 @@
 """
-Questions Handler - Fixed Version with User States
-
 Handles user questions with state management and full anonymity.
 """
 

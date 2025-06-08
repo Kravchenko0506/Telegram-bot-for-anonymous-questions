@@ -8,10 +8,10 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 
-# ПРИНУДИТЕЛЬНО загружаем .env с перезаписью существующих переменных
+# Forcefully load .env with overwriting existing variables
 load_dotenv(override=True, verbose=True)
 
-# Для отладки - показываем что загрузилось
+# For debugging - we show what has been loaded
 def _debug_env():
     """Debug function to show loaded environment variables."""
     token = os.getenv("BOT_TOKEN", "NOT_FOUND")
