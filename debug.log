@@ -489,3 +489,7 @@
 2025-06-09 01:01:28,963 - admin - INFO - Enhanced stats viewed: total=2, answered=0, rate=0.0%
 2025-06-09 01:01:28,965 - aiogram.event - INFO - Update id=120544890 is handled. Duration 202 ms by bot id=7979066799
 2025-06-09 01:01:33,058 - aiogram.event - INFO - Update id=120544891 is handled. Duration 188 ms by bot id=7979066799
+2025-06-09 01:13:46,096 - aiogram.dispatcher - INFO - Polling stopped
+2025-06-09 01:13:46,100 - aiogram.dispatcher - INFO - Polling stopped for bot @LogopodskazkiTest_bot id=7979066799 - 'Logopodskazki_test'
+2025-06-09 01:13:46,365 - models.database - INFO - Database engine closed successfully
+2025-06-09 01:13:46,365 - bot - INFO - Database connections closed
