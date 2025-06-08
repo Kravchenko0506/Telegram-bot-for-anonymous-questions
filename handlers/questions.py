@@ -1,5 +1,7 @@
 """
-Handles user questions with state management and full anonymity.
+Questions Handler - Production Version with Validation
+
+Handles user questions with validation, sanitization, and state management.
 """
 
 from aiogram import Router
@@ -20,6 +22,7 @@ from config import (
 from models.database import async_session
 from models.questions import Question
 from models.user_states import UserStateManager
+from utils.validators import InputValidator, ContentModerator
 from keyboards.inline import (
     get_admin_question_keyboard, 
     get_user_question_sent_keyboard,
@@ -60,12 +63,12 @@ async def user_callback_handler(callback: CallbackQuery):
 @router.message()
 async def unified_message_handler(message: Message):
     """
-    Unified handler for all text messages with state management.
+    Unified handler for all text messages with validation.
     
     Handles:
     1. Admin in answer mode
     2. Admin replies to questions  
-    3. Regular user questions (with state checks)
+    3. Regular user questions (with validation and state checks)
     """
     user_id = message.from_user.id
     
@@ -75,7 +78,7 @@ async def unified_message_handler(message: Message):
         from handlers.admin_states import is_admin_in_answer_mode, handle_admin_answer
         
         # Check if admin is in answer mode
-        if is_admin_in_answer_mode(user_id):
+        if await is_admin_in_answer_mode(user_id):
             await handle_admin_answer(message)
             return
         
@@ -119,22 +122,38 @@ async def handle_user_message(message: Message):
 
 
 async def handle_user_question(message: Message):
-    """Handle incoming questions from users with state management."""
+    """Handle incoming questions from users with validation."""
     user_id = message.from_user.id
     
     # Validate message content
-    if not message.text or not message.text.strip():
+    if not message.text:
         await message.answer(ERROR_MESSAGE_EMPTY)
         logger.warning(f"Empty question attempt from user {user_id}")
         return
     
-    question_text = message.text.strip()
+    # Sanitize input
+    question_text = InputValidator.sanitize_text(message.text, MAX_QUESTION_LENGTH)
     
-    # Check question length
-    if len(question_text) > MAX_QUESTION_LENGTH:
-        await message.answer(ERROR_MESSAGE_TOO_LONG)
-        logger.warning(f"Question too long from user {user_id}: {len(question_text)} chars")
+    # Validate question
+    is_valid, error_message = InputValidator.validate_question(question_text)
+    
+    if not is_valid:
+        await message.answer(f"❌ {error_message}")
+        logger.warning(f"Invalid question from user {user_id}: {error_message}")
         return
+    
+    # Check for spam
+    if ContentModerator.is_likely_spam(question_text):
+        await message.answer(
+            "❌ Ваш вопрос похож на спам. Пожалуйста, задайте настоящий вопрос."
+        )
+        logger.warning(f"Spam detected from user {user_id}: score={ContentModerator.calculate_spam_score(question_text)}")
+        return
+    
+    # Log if personal data detected
+    personal_data = InputValidator.extract_personal_data(question_text)
+    if any(personal_data.values()):
+        logger.warning(f"Personal data in question from user {user_id}: {list(personal_data.keys())}")
     
     try:
         # Save question to database
@@ -164,6 +183,11 @@ async def handle_user_question(message: Message):
 <i>Отправлено: {datetime.now().strftime("%d.%m.%Y %H:%M")}</i>
 """
         
+        # Add spam score if suspicious
+        spam_score = ContentModerator.calculate_spam_score(question_text)
+        if spam_score > 0.3:
+            admin_message += f"\n<i>⚠️ Спам-рейтинг: {spam_score:.1%}</i>"
+        
         keyboard = get_admin_question_keyboard(question_id)
         
         try:
@@ -189,7 +213,7 @@ async def handle_user_question(message: Message):
         keyboard = get_user_question_sent_keyboard()
         await message.answer(success_message, reply_markup=keyboard)
         
-        logger.info(f"Question {question_id} processed successfully with state management")
+        logger.info(f"Question {question_id} processed successfully with validation")
         
     except Exception as e:
         await message.answer(ERROR_DATABASE)
@@ -213,8 +237,12 @@ async def handle_admin_reply(message: Message):
         question_id = int(match.group(1))
         answer_text = message.text.strip()
         
-        if not answer_text:
-            await message.answer("❌ Ответ не может быть пустым.")
+        # Validate answer
+        answer_text = InputValidator.sanitize_text(answer_text)
+        is_valid, error_message = InputValidator.validate_answer(answer_text)
+        
+        if not is_valid:
+            await message.answer(f"❌ {error_message}")
             return
         
         # Get question and save answer

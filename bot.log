@@ -1,0 +1,43 @@
+2025-06-09 01:49:06,312 - bot - INFO - Starting Anonymous Questions Bot (Production Mode)...
+2025-06-09 01:49:06,312 - bot - INFO - Initializing PostgreSQL database...
+2025-06-09 01:49:06,749 - models.database - INFO - Default settings initialized
+2025-06-09 01:49:06,805 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 01:49:07,347 - bot - INFO - Bot menu configured successfully
+2025-06-09 01:49:07,347 - bot - INFO - All handlers registered successfully
+2025-06-09 01:49:07,351 - bot - INFO - Bot is starting polling...
+2025-06-09 01:50:04,285 - bot - INFO - /start from user 334543329 without unique_id
+2025-06-09 01:50:04,635 - bot - INFO - Admin 334543329 accessed simplified admin panel
+2025-06-09 01:51:00,088 - bot - INFO - /start from user 7490009300 without unique_id
+2025-06-09 01:51:00,499 - bot - INFO - User 7490009300 got welcome with dynamic settings, state reset to idle
+2025-06-09 01:51:00,505 - bot - INFO - User 7490009300 started bot without tracking
+2025-06-09 01:51:06,981 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:51:16,488 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:51:20,765 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:51:32,412 - question_logger - INFO - Question saved: ID=22, user state updated
+2025-06-09 01:51:32,479 - question_logger - INFO - Admin notification sent for question 22
+2025-06-09 01:51:32,542 - question_logger - INFO - Question 22 processed successfully with validation
+2025-06-09 01:51:43,195 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:52:27,761 - bot - INFO - Starting Anonymous Questions Bot (Production Mode)...
+2025-06-09 01:52:27,761 - bot - INFO - Initializing PostgreSQL database...
+2025-06-09 01:52:28,126 - models.database - INFO - Default settings initialized
+2025-06-09 01:52:28,126 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 01:52:28,550 - bot - INFO - Bot menu configured successfully
+2025-06-09 01:52:28,557 - bot - INFO - All handlers registered successfully
+2025-06-09 01:52:28,559 - bot - INFO - Bot is starting polling...
+2025-06-09 01:53:15,155 - question_logger - INFO - User 7490009300 blocked from sending text, must use button
+2025-06-09 01:53:30,816 - bot - INFO - /start from user 334543329 without unique_id
+2025-06-09 01:53:31,019 - bot - INFO - Admin 334543329 accessed simplified admin panel
+2025-06-09 01:53:38,087 - bot - INFO - /start from user 7490009300 without unique_id
+2025-06-09 01:53:38,289 - bot - INFO - User 7490009300 got welcome with dynamic settings, state reset to idle
+2025-06-09 01:53:38,290 - bot - INFO - User 7490009300 started bot without tracking
+2025-06-09 01:53:45,661 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:53:53,300 - question_logger - INFO - Question saved: ID=23, user state updated
+2025-06-09 01:53:53,370 - question_logger - INFO - Admin notification sent for question 23
+2025-06-09 01:53:53,450 - question_logger - INFO - Question 23 processed successfully with validation
+2025-06-09 01:55:33,595 - bot - INFO - /start from user 7490009300 without unique_id
+2025-06-09 01:55:33,895 - bot - INFO - User 7490009300 got welcome with dynamic settings, state reset to idle
+2025-06-09 01:55:33,895 - bot - INFO - User 7490009300 started bot without tracking
+2025-06-09 01:55:39,519 - bot - WARNING - Rate limit cooldown hit for user 7490009300
+2025-06-09 01:55:44,596 - question_logger - INFO - Question saved: ID=24, user state updated
+2025-06-09 01:55:44,669 - question_logger - INFO - Admin notification sent for question 24
+2025-06-09 01:55:44,737 - question_logger - INFO - Question 24 processed successfully with validation

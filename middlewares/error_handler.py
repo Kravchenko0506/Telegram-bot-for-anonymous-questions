@@ -1,0 +1,310 @@
+"""
+Error Handler Middleware
+
+Centralized error handling with proper logging and user notifications.
+"""
+
+from typing import Callable, Dict, Any, Awaitable
+import traceback
+from datetime import datetime
+
+from aiogram import BaseMiddleware
+from aiogram.types import Update, ErrorEvent
+from aiogram.exceptions import (
+    TelegramBadRequest, 
+    TelegramForbiddenError,
+    TelegramNotFound,
+    TelegramUnauthorizedError,
+    TelegramAPIError
+)
+from sqlalchemy.exc import (
+    DatabaseError,
+    IntegrityError,
+    OperationalError,
+    DataError
+)
+
+from config import ADMIN_ID, ERROR_DATABASE, SENTRY_DSN
+from utils.logger import get_bot_logger
+
+logger = get_bot_logger()
+
+# Import Sentry if configured
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        SENTRY_ENABLED = True
+    except ImportError:
+        SENTRY_ENABLED = False
+        logger.warning("Sentry SDK not installed, error tracking disabled")
+else:
+    SENTRY_ENABLED = False
+
+
+class ErrorHandlerMiddleware(BaseMiddleware):
+    """
+    Global error handler for all bot errors.
+    
+    Features:
+    - Categorizes errors by type
+    - Sends appropriate user messages
+    - Logs with full context
+    - Integrates with Sentry if configured
+    - Notifies admin of critical errors
+    """
+    
+    def __init__(self, notify_admin: bool = True):
+        self.notify_admin = notify_admin
+        self.error_count = 0
+        self.last_errors: list[Dict[str, Any]] = []
+    
+    async def __call__(
+        self,
+        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
+        event: Update,
+        data: Dict[str, Any]
+    ) -> Any:
+        """Process update with error handling."""
+        try:
+            return await handler(event, data)
+        except Exception as error:
+            await self.handle_error(event, error, data)
+    
+    async def handle_error(self, event: Update, error: Exception, data: Dict[str, Any]):
+        """Handle different types of errors."""
+        self.error_count += 1
+        
+        # Extract context
+        context = self._extract_context(event, data)
+        
+        # Log error with context
+        logger.error(
+            f"Error #{self.error_count}: {type(error).__name__}: {error}",
+            extra=context,
+            exc_info=True
+        )
+        
+        # Store error for admin review
+        self._store_error(error, context)
+        
+        # Send to Sentry if configured
+        if SENTRY_ENABLED:
+            self._send_to_sentry(error, context)
+        
+        # Handle specific error types
+        user_message = await self._handle_specific_error(error, event, context)
+        
+        # Send user notification
+        await self._notify_user(event, user_message)
+        
+        # Notify admin of critical errors
+        if self.notify_admin and self._is_critical_error(error):
+            await self._notify_admin(error, context)
+    
+    def _extract_context(self, event: Update, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract context from update."""
+        context = {
+            'update_id': event.update_id,
+            'timestamp': datetime.now().isoformat(),
+            'handler': data.get('handler', 'unknown')
+        }
+        
+        # Extract user info
+        if event.message:
+            user = event.message.from_user
+            context.update({
+                'user_id': user.id if user else None,
+                'username': user.username if user else None,
+                'chat_id': event.message.chat.id,
+                'message_text': event.message.text[:100] if event.message.text else None,
+                'message_id': event.message.message_id
+            })
+        elif event.callback_query:
+            user = event.callback_query.from_user
+            context.update({
+                'user_id': user.id,
+                'username': user.username,
+                'callback_data': event.callback_query.data,
+                'message_id': event.callback_query.message.message_id if event.callback_query.message else None
+            })
+        
+        return context
+    
+    async def _handle_specific_error(
+        self, 
+        error: Exception, 
+        event: Update, 
+        context: Dict[str, Any]
+    ) -> str:
+        """Handle specific error types and return user message."""
+        
+        # Database errors
+        if isinstance(error, (DatabaseError, OperationalError)):
+            logger.critical(f"Database error: {error}", extra=context)
+            return ERROR_DATABASE
+        
+        elif isinstance(error, IntegrityError):
+            logger.error(f"Database integrity error: {error}", extra=context)
+            return "❌ Ошибка при сохранении данных. Попробуйте еще раз."
+        
+        elif isinstance(error, DataError):
+            logger.error(f"Database data error: {error}", extra=context)
+            return "❌ Некорректные данные. Проверьте ввод и попробуйте снова."
+        
+        # Telegram API errors
+        elif isinstance(error, TelegramForbiddenError):
+            logger.warning(f"Bot blocked by user: {context.get('user_id')}")
+            return ""  # User blocked bot, can't send message
+        
+        elif isinstance(error, TelegramBadRequest):
+            logger.error(f"Bad request to Telegram: {error}", extra=context)
+            return "❌ Ошибка при отправке сообщения. Попробуйте позже."
+        
+        elif isinstance(error, TelegramNotFound):
+            logger.error(f"Telegram entity not found: {error}", extra=context)
+            return "❌ Сообщение не найдено или удалено."
+        
+        elif isinstance(error, TelegramUnauthorizedError):
+            logger.critical(f"Bot unauthorized: {error}")
+            return "❌ Критическая ошибка бота. Обратитесь к администратору."
+        
+        elif isinstance(error, TelegramAPIError):
+            logger.error(f"Telegram API error: {error}", extra=context)
+            return "❌ Ошибка Telegram API. Попробуйте позже."
+        
+        # Validation errors
+        elif isinstance(error, ValueError):
+            logger.warning(f"Validation error: {error}", extra=context)
+            return f"❌ Ошибка валидации: {str(error)}"
+        
+        # Generic errors
+        else:
+            logger.error(f"Unhandled error type {type(error).__name__}: {error}", extra=context)
+            return "❌ Произошла непредвиденная ошибка. Попробуйте позже."
+    
+    def _store_error(self, error: Exception, context: Dict[str, Any]):
+        """Store error for admin review."""
+        error_info = {
+            'type': type(error).__name__,
+            'message': str(error),
+            'context': context,
+            'traceback': traceback.format_exc(),
+            'timestamp': datetime.now()
+        }
+        
+        self.last_errors.append(error_info)
+        
+        # Keep only last 50 errors
+        if len(self.last_errors) > 50:
+            self.last_errors.pop(0)
+    
+    def _send_to_sentry(self, error: Exception, context: Dict[str, Any]):
+        """Send error to Sentry if configured."""
+        if not SENTRY_ENABLED:
+            return
+        
+        try:
+            import sentry_sdk
+            
+            # Set user context
+            if 'user_id' in context:
+                sentry_sdk.set_user({
+                    "id": context['user_id'],
+                    "username": context.get('username')
+                })
+            
+            # Set additional context
+            sentry_sdk.set_context("telegram_update", context)
+            
+            # Capture exception
+            sentry_sdk.capture_exception(error)
+            
+        except Exception as e:
+            logger.error(f"Failed to send error to Sentry: {e}")
+    
+    def _is_critical_error(self, error: Exception) -> bool:
+        """Check if error is critical and should notify admin."""
+        critical_types = (
+            DatabaseError,
+            OperationalError,
+            TelegramUnauthorizedError,
+        )
+        return isinstance(error, critical_types)
+    
+    async def _notify_user(self, event: Update, message: str):
+        """Send error message to user."""
+        if not message:
+            return
+        
+        try:
+            if event.message:
+                await event.message.answer(message)
+            elif event.callback_query:
+                await event.callback_query.answer(message, show_alert=True)
+        except Exception as e:
+            logger.error(f"Failed to notify user about error: {e}")
+    
+    async def _notify_admin(self, error: Exception, context: Dict[str, Any]):
+        """Notify admin about critical error."""
+        try:
+            from aiogram import Bot
+            bot: Bot = context.get('bot')
+            
+            if not bot:
+                return
+            
+            admin_message = f"""
+🚨 <b>Критическая ошибка в боте!</b>
+
+<b>Тип:</b> <code>{type(error).__name__}</code>
+<b>Сообщение:</b> <code>{str(error)[:200]}</code>
+<b>Пользователь:</b> {context.get('user_id', 'Unknown')}
+<b>Время:</b> {context['timestamp']}
+
+<b>Контекст:</b>
+<pre>{self._format_context(context)}</pre>
+
+<i>Проверьте логи для подробностей.</i>
+"""
+            
+            await bot.send_message(
+                chat_id=ADMIN_ID,
+                text=admin_message,
+                parse_mode="HTML"
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to notify admin about critical error: {e}")
+    
+    def _format_context(self, context: Dict[str, Any]) -> str:
+        """Format context for admin message."""
+        # Remove sensitive data
+        safe_context = {
+            k: v for k, v in context.items()
+            if k not in ['bot', 'handler', 'traceback']
+        }
+        
+        # Format as readable text
+        lines = []
+        for key, value in safe_context.items():
+            if value is not None:
+                lines.append(f"{key}: {value}")
+        
+        return "\n".join(lines)[:500]  # Limit length
+    
+    def get_error_stats(self) -> Dict[str, Any]:
+        """Get error statistics."""
+        error_types = {}
+        for error in self.last_errors:
+            error_type = error['type']
+            error_types[error_type] = error_types.get(error_type, 0) + 1
+        
+        return {
+            'total_errors': self.error_count,
+            'error_types': error_types,
+            'last_error': self.last_errors[-1] if self.last_errors else None,
+            'errors_last_hour': len([
+                e for e in self.last_errors 
+                if (datetime.now() - e['timestamp']).seconds < 3600
+            ])
+        }

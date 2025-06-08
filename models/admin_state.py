@@ -1,7 +1,6 @@
 """
 Admin State Model for Database Storage
 
-Stores admin states in database instead of memory to survive restarts.
 """
 
 from sqlalchemy import Column, BigInteger, Integer, String, DateTime, JSON

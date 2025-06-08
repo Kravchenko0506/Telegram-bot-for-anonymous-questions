@@ -1,7 +1,7 @@
 """
-Telegram Bot for Anonymous Questions - Simplified Main Entry Point
+Telegram Bot for Anonymous Questions - Production Ready Version
 
-Bot with only /start command and admin editing capabilities
+Enhanced with security, rate limiting, and error handling.
 """
 
 import asyncio
@@ -11,11 +11,40 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 
-from config import TOKEN, ADMIN_ID, validate_config
+from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
 from models.database import init_db, close_db, check_db_connection
-from handlers import start, questions, admin
-from handlers import admin_states
+from handlers import start, questions, admin, admin_states
+from middlewares.rate_limit import RateLimitMiddleware, CallbackRateLimitMiddleware
+from middlewares.error_handler import ErrorHandlerMiddleware
 from utils.logger import get_bot_logger
+from utils.periodic_tasks import start_periodic_tasks, stop_periodic_tasks
+
+# Initialize Sentry if configured
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.asyncio import AsyncioIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[
+                AsyncioIntegration(),
+                LoggingIntegration(
+                    level=logging.INFO,
+                    event_level=logging.ERROR
+                ),
+            ],
+            traces_sample_rate=0.1,
+            environment="production"
+        )
+        logger = get_bot_logger()
+        logger.info("Sentry error tracking initialized")
+    except ImportError:
+        logger = get_bot_logger()
+        logger.warning("Sentry SDK not installed, skipping error tracking")
+else:
+    logger = get_bot_logger()
 
 
 async def setup_bot() -> tuple[Bot, Dispatcher]:
@@ -34,13 +63,20 @@ async def setup_bot() -> tuple[Bot, Dispatcher]:
     # Create dispatcher
     dp = Dispatcher()
     
+    # Add middleware in correct order
+    # 1. Error handler (outermost - catches all errors)
+    dp.message.middleware(ErrorHandlerMiddleware(notify_admin=True))
+    dp.callback_query.middleware(ErrorHandlerMiddleware(notify_admin=True))
+    
+    # 2. Rate limiting
+    dp.message.middleware(RateLimitMiddleware())
+    dp.callback_query.middleware(CallbackRateLimitMiddleware())
+    
     return bot, dp
 
 
 async def setup_bot_menu(bot: Bot) -> None:
     """Setup simplified bot menu - only /start command."""
-    logger = get_bot_logger()
-    
     try:
         # Only /start command for all users
         user_commands = [
@@ -67,7 +103,7 @@ async def setup_bot_menu(bot: Bot) -> None:
             BotCommandScopeChat(chat_id=ADMIN_ID)
         )
         
-        logger.info("Simplified bot menu configured: only /start for users, editing commands for admin")
+        logger.info("Bot menu configured successfully")
         
     except Exception as e:
         logger.error(f"Failed to setup bot menu: {e}")
@@ -89,8 +125,51 @@ async def register_handlers(dp: Dispatcher) -> None:
     dp.include_router(start.router)         # Start and help commands
     dp.include_router(questions.router)     # Question processing (catch-all, LAST)
     
-    logger = get_bot_logger()
     logger.info("All handlers registered successfully")
+
+
+async def on_startup(bot: Bot, dp: Dispatcher) -> None:
+    """Actions to perform on bot startup."""
+    logger.info("Running startup tasks...")
+    
+    # Verify database connection
+    if not await check_db_connection():
+        raise Exception("Database connection failed")
+    
+    # Start periodic tasks
+    await start_periodic_tasks()
+    
+    # Get bot info
+    bot_info = await bot.get_me()
+    logger.info(f"Bot started: @{bot_info.username}")
+    
+    # Notify admin
+    try:
+        await bot.send_message(
+            ADMIN_ID,
+            "✅ Бот запущен и готов к работе!\n\n"
+            f"Версия: Production Ready\n"
+            f"Имя: @{bot_info.username}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to notify admin on startup: {e}")
+
+
+async def on_shutdown(bot: Bot, dp: Dispatcher) -> None:
+    """Actions to perform on bot shutdown."""
+    logger.info("Running shutdown tasks...")
+    
+    # Stop periodic tasks
+    await stop_periodic_tasks()
+    
+    # Notify admin
+    try:
+        await bot.send_message(ADMIN_ID, "⚠️ Бот остановлен")
+    except Exception:
+        pass  # Ignore errors on shutdown
+    
+    # Close bot session
+    await bot.session.close()
 
 
 async def main() -> None:
@@ -101,39 +180,29 @@ async def main() -> None:
     1. Setup logging
     2. Initialize database
     3. Create bot and dispatcher
-    4. Setup simplified bot menu
+    4. Setup bot menu
     5. Register handlers
-    6. Start polling
-    7. Handle graceful shutdown
+    6. Start polling with startup/shutdown hooks
     """
-    logger = get_bot_logger()
-    
     try:
-        logger.info("Starting Anonymous Questions Bot...")
+        logger.info("Starting Anonymous Questions Bot (Production Mode)...")
         
         # Initialize database
         logger.info("Initializing PostgreSQL database...")
         await init_db()
         
-        # Check database connection
-        if not await check_db_connection():
-            raise Exception("Database connection failed")
-        
-        logger.info("Database connection verified")
-        
         # Setup bot and dispatcher
         bot, dp = await setup_bot()
         
-        # Setup simplified bot menu
+        # Setup bot menu
         await setup_bot_menu(bot)
         
         # Register handlers
         await register_handlers(dp)
         
-        # Get bot info
-        bot_info = await bot.get_me()
-        logger.info(f"Bot started: @{bot_info.username}")
-        logger.info(f"Simplified menu: only /start for users, editing commands for admin")
+        # Set startup and shutdown hooks
+        dp.startup.register(lambda: on_startup(bot, dp))
+        dp.shutdown.register(lambda: on_shutdown(bot, dp))
         
         # Start bot polling
         logger.info("Bot is starting polling...")
@@ -161,24 +230,29 @@ if __name__ == "__main__":
     
     Sets up proper logging and runs the main coroutine.
     """
-    # Setup detailed logging for startup and debugging
+    # Setup logging
     logging.basicConfig(
-        level=logging.DEBUG,  # Детальные логи
+        level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.StreamHandler(),  # В консоль
-            logging.FileHandler('debug.log', encoding='utf-8')  # В файл debug.log
+            logging.StreamHandler(),
+            logging.FileHandler('bot.log', encoding='utf-8')
         ]
     )
     
-    print("🔍 DEBUG LOGGING ENABLED")
-    print("📁 Logs: console + debug.log file")
+    # Suppress noisy loggers
+    logging.getLogger('aiogram').setLevel(logging.WARNING)
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    
+    print("🚀 Starting bot in PRODUCTION mode...")
+    print("📁 Logs: console + bot.log file")
+    print("🔒 Security features enabled")
     
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nBot stopped by user")
+        print("\n✋ Bot stopped by user")
     except Exception as e:
-        print(f"Failed to start bot: {e}")
+        print(f"❌ Failed to start bot: {e}")
         logging.exception("Critical startup error")
         exit(1)
