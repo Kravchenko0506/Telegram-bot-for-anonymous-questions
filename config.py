@@ -1,8 +1,6 @@
 """
 Configuration Module for Anonymous Questions Bot
 
-Secure version without hardcoded secrets.
-All sensitive data must be provided via environment variables.
 """
 
 import os
@@ -133,7 +131,8 @@ ERROR_QUESTION_NOT_FOUND: str = "❌ Вопрос не найден или уж�
 ERROR_ALREADY_ANSWERED: str = "❌ На этот вопрос уже был дан ответ."
 ERROR_SETTING_UPDATE: str = "❌ Ошибка при обновлении настройки."
 ERROR_INVALID_VALUE: str = "❌ Некорректное значение."
-ERROR_RATE_LIMIT: str = "❌ Слишком много вопросов. Попробуйте через {seconds} секунд."
+# Error Messages with rate limit placeholder
+ERROR_RATE_LIMIT: str = "❌ Слишком часто отправляете вопросы. Попробуйте через {seconds} секунд."
 
 # Admin Messages
 ADMIN_NEW_QUESTION: str = """

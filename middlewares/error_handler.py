@@ -4,12 +4,12 @@ Error Handler Middleware
 Centralized error handling with proper logging and user notifications.
 """
 
-from typing import Callable, Dict, Any, Awaitable
+from typing import Callable, Dict, Any, Awaitable, Union
 import traceback
 from datetime import datetime
 
 from aiogram import BaseMiddleware
-from aiogram.types import Update, ErrorEvent
+from aiogram.types import Update, ErrorEvent, Message, CallbackQuery
 from aiogram.exceptions import (
     TelegramBadRequest, 
     TelegramForbiddenError,
@@ -60,8 +60,8 @@ class ErrorHandlerMiddleware(BaseMiddleware):
     
     async def __call__(
         self,
-        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
-        event: Update,
+        handler: Callable[[Union[Update, Message, CallbackQuery], Dict[str, Any]], Awaitable[Any]],
+        event: Union[Update, Message, CallbackQuery],
         data: Dict[str, Any]
     ) -> Any:
         """Process update with error handling."""
@@ -70,7 +70,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         except Exception as error:
             await self.handle_error(event, error, data)
     
-    async def handle_error(self, event: Update, error: Exception, data: Dict[str, Any]):
+    async def handle_error(self, event: Union[Update, Message, CallbackQuery], error: Exception, data: Dict[str, Any]):
         """Handle different types of errors."""
         self.error_count += 1
         
@@ -104,28 +104,48 @@ class ErrorHandlerMiddleware(BaseMiddleware):
     def _extract_context(self, event: Update, data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract context from update."""
         context = {
-            'update_id': event.update_id,
             'timestamp': datetime.now().isoformat(),
             'handler': data.get('handler', 'unknown')
         }
         
-        # Extract user info
-        if event.message:
-            user = event.message.from_user
+        # Extract update_id if available
+        if hasattr(event, 'update_id'):
+            context['update_id'] = event.update_id
+        
+        # Extract user info based on event type
+        if hasattr(event, 'message') and event.message:
+            # This is an Update object with message
+            message = event.message
+            user = message.from_user
             context.update({
+                'event_type': 'message',
                 'user_id': user.id if user else None,
                 'username': user.username if user else None,
-                'chat_id': event.message.chat.id,
-                'message_text': event.message.text[:100] if event.message.text else None,
-                'message_id': event.message.message_id
+                'chat_id': message.chat.id,
+                'message_text': message.text[:100] if message.text else None,
+                'message_id': message.message_id
             })
-        elif event.callback_query:
-            user = event.callback_query.from_user
+        elif hasattr(event, 'callback_query') and event.callback_query:
+            # This is an Update object with callback_query
+            callback = event.callback_query
+            user = callback.from_user
             context.update({
+                'event_type': 'callback_query',
                 'user_id': user.id,
                 'username': user.username,
-                'callback_data': event.callback_query.data,
-                'message_id': event.callback_query.message.message_id if event.callback_query.message else None
+                'callback_data': callback.data,
+                'message_id': callback.message.message_id if callback.message else None
+            })
+        elif hasattr(event, 'from_user'):
+            # This is a Message object directly
+            user = event.from_user
+            context.update({
+                'event_type': 'direct_message',
+                'user_id': user.id if user else None,
+                'username': user.username if user else None,
+                'chat_id': event.chat.id if hasattr(event, 'chat') else None,
+                'message_text': event.text[:100] if hasattr(event, 'text') and event.text else None,
+                'message_id': event.message_id if hasattr(event, 'message_id') else None
             })
         
         return context
@@ -231,16 +251,22 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         )
         return isinstance(error, critical_types)
     
-    async def _notify_user(self, event: Update, message: str):
+    async def _notify_user(self, event: Union[Update, Message, CallbackQuery], message: str):
         """Send error message to user."""
         if not message:
             return
         
         try:
-            if event.message:
-                await event.message.answer(message)
-            elif event.callback_query:
-                await event.callback_query.answer(message, show_alert=True)
+            # Handle different event types
+            if isinstance(event, Message):
+                await event.answer(message)
+            elif isinstance(event, CallbackQuery):
+                await event.answer(message, show_alert=True)
+            elif isinstance(event, Update):
+                if event.message:
+                    await event.message.answer(message)
+                elif event.callback_query:
+                    await event.callback_query.answer(message, show_alert=True)
         except Exception as e:
             logger.error(f"Failed to notify user about error: {e}")
     

@@ -715,3 +715,258 @@ AttributeError: 'NoneType' object has no attribute 'send'
 2025-06-09 03:13:12,527 - question_logger - INFO - Question saved: ID=29, user state updated
 2025-06-09 03:13:12,588 - question_logger - INFO - Admin notification sent for question 29
 2025-06-09 03:13:12,667 - question_logger - INFO - Question 29 processed successfully with validation
+2025-06-09 03:17:49,317 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:17:49,317 - bot - DEBUG - Database health check passed
+2025-06-09 03:22:49,320 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:22:49,320 - bot - DEBUG - Database health check passed
+2025-06-09 03:27:49,324 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:27:49,330 - bot - DEBUG - Database health check passed
+2025-06-09 03:32:49,337 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:32:49,338 - bot - DEBUG - Database health check passed
+2025-06-09 03:37:49,348 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:37:49,348 - bot - DEBUG - Database health check passed
+2025-06-09 03:42:39,241 - bot - INFO - Running shutdown tasks...
+2025-06-09 03:42:39,241 - bot - INFO - Stopping periodic tasks...
+2025-06-09 03:42:39,241 - bot - INFO - All periodic tasks stopped
+2025-06-09 03:42:39,674 - models.database - INFO - Database engine closed successfully
+2025-06-09 03:42:39,674 - bot - INFO - Database connections closed
+2025-06-09 03:43:44,727 - models.database - INFO - Default settings initialized
+2025-06-09 03:43:44,727 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 03:43:44,960 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:43:44,976 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:48:44,983 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:53:45,008 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:58:45,011 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 03:59:40,890 - models.database - INFO - Database engine closed successfully
+2025-06-09 04:02:21,978 - models.database - INFO - Default settings initialized
+2025-06-09 04:02:21,978 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 04:02:22,184 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:02:22,195 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:07:22,191 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:12:22,204 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:17:22,212 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:22:22,209 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:24:58,711 - models.database - INFO - Database engine closed successfully
+2025-06-09 04:25:05,160 - models.database - INFO - Default settings initialized
+2025-06-09 04:25:05,161 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 04:25:05,383 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:25:05,389 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:28:22,172 - aiogram.event - ERROR - Cause exception while process update id=120545008 by bot id=7979066799
+AttributeError: 'Message' object has no attribute 'update_id'
+Traceback (most recent call last):
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 69, in __call__
+    return await handler(event, data)
+  File "d:\Python\anon_question_bot\middlewares\rate_limit.py", line 73, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "d:\Python\anon_question_bot\handlers\questions.py", line 88, in unified_message_handler
+    if await is_admin_in_answer_mode(user_id):
+TypeError: object bool can't be used in 'await' expression
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 753, in __getattr__
+    return pydantic_extra[item]
+KeyError: 'update_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\error.py", line 25, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\user_context.py", line 27, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\fsm\middleware.py", line 41, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 156, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 148, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 71, in __call__
+    await self.handle_error(event, error, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 78, in handle_error
+    context = self._extract_context(event, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 107, in _extract_context
+    'update_id': event.update_id,
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 755, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+AttributeError: 'Message' object has no attribute 'update_id'
+2025-06-09 04:28:41,051 - aiogram.event - ERROR - Cause exception while process update id=120545009 by bot id=7979066799
+AttributeError: 'Message' object has no attribute 'update_id'
+Traceback (most recent call last):
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 69, in __call__
+    return await handler(event, data)
+  File "d:\Python\anon_question_bot\middlewares\rate_limit.py", line 73, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "d:\Python\anon_question_bot\handlers\questions.py", line 88, in unified_message_handler
+    if await is_admin_in_answer_mode(user_id):
+TypeError: object bool can't be used in 'await' expression
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 753, in __getattr__
+    return pydantic_extra[item]
+KeyError: 'update_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\error.py", line 25, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\user_context.py", line 27, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\fsm\middleware.py", line 41, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 156, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 148, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 71, in __call__
+    await self.handle_error(event, error, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 78, in handle_error
+    context = self._extract_context(event, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 107, in _extract_context
+    'update_id': event.update_id,
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 755, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+AttributeError: 'Message' object has no attribute 'update_id'
+2025-06-09 04:30:05,420 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:30:21,610 - aiogram.event - ERROR - Cause exception while process update id=120545012 by bot id=7979066799
+AttributeError: 'Message' object has no attribute 'update_id'
+Traceback (most recent call last):
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 69, in __call__
+    return await handler(event, data)
+  File "d:\Python\anon_question_bot\middlewares\rate_limit.py", line 73, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "d:\Python\anon_question_bot\handlers\questions.py", line 88, in unified_message_handler
+    if await is_admin_in_answer_mode(user_id):
+TypeError: object bool can't be used in 'await' expression
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 753, in __getattr__
+    return pydantic_extra[item]
+KeyError: 'update_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\error.py", line 25, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\middlewares\user_context.py", line 27, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\fsm\middleware.py", line 41, in __call__
+    return await handler(event, data)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\handler.py", line 43, in call
+    return await wrapped()
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 156, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 128, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 123, in _wrapped
+    return await self._propagate_event(
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\router.py", line 148, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\aiogram\dispatcher\event\telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 71, in __call__
+    await self.handle_error(event, error, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 78, in handle_error
+    context = self._extract_context(event, data)
+  File "d:\Python\anon_question_bot\middlewares\error_handler.py", line 107, in _extract_context
+    'update_id': event.update_id,
+  File "C:\Users\kravc\.conda\envs\anon-questions-bot\lib\site-packages\pydantic\main.py", line 755, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+AttributeError: 'Message' object has no attribute 'update_id'
+2025-06-09 04:32:32,096 - models.database - INFO - Database engine closed successfully
+2025-06-09 04:32:40,493 - models.database - INFO - Default settings initialized
+2025-06-09 04:32:40,493 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 04:32:40,710 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:32:40,716 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:34:12,220 - models.database - INFO - Database engine closed successfully
+2025-06-09 04:41:05,655 - models.database - INFO - Default settings initialized
+2025-06-09 04:41:05,656 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 04:41:05,938 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:41:05,959 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:46:05,971 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:48:41,229 - models.database - INFO - Database engine closed successfully
+2025-06-09 04:48:47,107 - models.database - INFO - Default settings initialized
+2025-06-09 04:48:47,107 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 04:48:47,325 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 04:48:47,333 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:25:46,289 - models.database - INFO - Default settings initialized
+2025-06-09 12:25:46,312 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 12:25:46,602 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:25:46,609 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:30:49,754 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:35:49,770 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:40:49,781 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:45:49,795 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:50:49,807 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 12:55:49,815 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:00:49,817 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:05:49,829 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:10:49,847 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:15:49,858 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:20:49,867 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 13:25:49,867 - models.database - INFO - PostgreSQL + asyncpg connection successful

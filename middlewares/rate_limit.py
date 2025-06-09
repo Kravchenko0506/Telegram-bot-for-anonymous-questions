@@ -1,6 +1,4 @@
 """
-Rate Limiting Middleware
-
 Prevents spam and abuse by limiting user actions.
 """
 
@@ -28,7 +26,7 @@ class RateLimitMiddleware(BaseMiddleware):
     
     Features:
     - Limits questions per hour
-    - Enforces cooldown between messages
+    - Enforces cooldown between messages (except first question)
     - Tracks user violations
     - Exempt admin from limits
     """
@@ -41,11 +39,16 @@ class RateLimitMiddleware(BaseMiddleware):
         self.questions_per_hour = questions_per_hour
         self.cooldown_seconds = cooldown_seconds
         
-        # Process the callback
         # Storage for tracking
         self.user_questions: Dict[int, list[datetime]] = defaultdict(list)
         self.user_last_message: Dict[int, datetime] = {}
         self.user_violations: Dict[int, int] = defaultdict(int)
+        
+        # Track when user sent their last question (not just any message)
+        self.user_last_question: Dict[int, datetime] = {}
+        
+        # Track if user has sent their first question
+        self.user_has_sent_first_question: set[int] = set()
     
     async def __call__(
         self,
@@ -69,20 +72,31 @@ class RateLimitMiddleware(BaseMiddleware):
         if user_id == ADMIN_ID:
             return await handler(event, data)
         
+        # Skip rate limiting for commands
+        if event.text and event.text.startswith('/'):
+            return await handler(event, data)
+        
         # Check rate limits
         now = datetime.now()
         
-        # Check cooldown
-        if not await self._check_cooldown(user_id, now):
-            remaining = self._get_cooldown_remaining(user_id)
-            await event.answer(
-                ERROR_RATE_LIMIT.format(seconds=remaining)
-            )
-            logger.warning(f"Rate limit cooldown hit for user {user_id}")
-            return  # Don't process further
-        
-        # Check hourly limit for questions
-        if event.text and not event.text.startswith('/'):
+        # Check cooldown only for consecutive questions
+        if await self._is_sending_question(user_id):
+            # Check if this is user's first question ever
+            is_first_question = user_id not in self.user_has_sent_first_question
+            
+            # Skip cooldown for first question
+            if not is_first_question:
+                if not await self._check_question_cooldown(user_id, now):
+                    remaining = self._get_cooldown_remaining(user_id)
+                    await event.answer(
+                        ERROR_RATE_LIMIT.format(seconds=remaining)
+                    )
+                    logger.warning(f"Rate limit cooldown hit for user {user_id}")
+                    return  # Don't process further
+            else:
+                logger.info(f"First question from user {user_id} - skipping cooldown")
+            
+            # Check hourly limit for questions
             if not await self._check_hourly_limit(user_id, now):
                 await event.answer(
                     f"❌ Вы превысили лимит вопросов ({self.questions_per_hour} в час). "
@@ -90,6 +104,13 @@ class RateLimitMiddleware(BaseMiddleware):
                 )
                 logger.warning(f"Rate limit hourly hit for user {user_id}")
                 return  # Don't process further
+            
+            # Mark this as a question timestamp
+            self.user_last_question[user_id] = now
+            
+            # Mark that user has sent their first question
+            if is_first_question:
+                self.user_has_sent_first_question.add(user_id)
         
         # Update last message time
         self.user_last_message[user_id] = now
@@ -97,24 +118,33 @@ class RateLimitMiddleware(BaseMiddleware):
         # Process the message
         return await handler(event, data)
     
-    async def _check_cooldown(self, user_id: int, now: datetime) -> bool:
-        """Check if user is within cooldown period."""
-        last_message = self.user_last_message.get(user_id)
+    async def _is_sending_question(self, user_id: int) -> bool:
+        """Check if user is sending a question (not in answer mode)."""
+        # Import here to avoid circular imports
+        from models.user_states import UserStateManager
         
-        if not last_message:
+        # Check if user can send a question based on their state
+        can_send = await UserStateManager.can_send_question(user_id)
+        return can_send
+    
+    async def _check_question_cooldown(self, user_id: int, now: datetime) -> bool:
+        """Check if user is within cooldown period for questions."""
+        last_question = self.user_last_question.get(user_id)
+        
+        if not last_question:
             return True
         
-        time_passed = (now - last_message).total_seconds()
+        time_passed = (now - last_question).total_seconds()
         return time_passed >= self.cooldown_seconds
     
     def _get_cooldown_remaining(self, user_id: int) -> int:
         """Get remaining cooldown seconds."""
-        last_message = self.user_last_message.get(user_id)
-        if not last_message:
+        last_question = self.user_last_question.get(user_id)
+        if not last_question:
             return 0
         
         now = datetime.now()
-        time_passed = (now - last_message).total_seconds()
+        time_passed = (now - last_question).total_seconds()
         remaining = self.cooldown_seconds - time_passed
         
         return max(0, int(remaining))
@@ -152,11 +182,15 @@ class RateLimitMiddleware(BaseMiddleware):
         # Get cooldown status
         cooldown_remaining = self._get_cooldown_remaining(user_id)
         
+        # Check if user has sent first question
+        has_sent_first = user_id in self.user_has_sent_first_question
+        
         return {
             'questions_last_hour': recent_questions,
             'questions_limit': self.questions_per_hour,
             'cooldown_remaining': cooldown_remaining,
-            'violations': self.user_violations.get(user_id, 0)
+            'violations': self.user_violations.get(user_id, 0),
+            'has_sent_first_question': has_sent_first
         }
     
     async def cleanup_old_data(self):
@@ -180,18 +214,29 @@ class RateLimitMiddleware(BaseMiddleware):
             if self.user_last_message[user_id] < hour_ago:
                 del self.user_last_message[user_id]
         
+        # Clean old last question times
+        for user_id in list(self.user_last_question.keys()):
+            if self.user_last_question[user_id] < hour_ago:
+                del self.user_last_question[user_id]
+        
         logger.debug(f"Cleaned up rate limit data. Active users: {len(self.user_questions)}")
 
 
 class CallbackRateLimitMiddleware(BaseMiddleware):
     """
     Rate limiter for callback queries (button clicks).
-    Prevents button spam.
+    Prevents button spam but is more lenient than message rate limiting.
     """
     
     def __init__(self, cooldown_seconds: int = 1):
         self.cooldown_seconds = cooldown_seconds
         self.user_last_callback: Dict[int, datetime] = {}
+        
+        # Don't rate limit these callback data patterns
+        self.exempt_patterns = [
+            'ask_another_question',  # Allow asking another question
+            'cancel',  # Allow cancellations
+        ]
     
     async def __call__(
         self,
@@ -210,6 +255,10 @@ class CallbackRateLimitMiddleware(BaseMiddleware):
         if user_id == ADMIN_ID:
             return await handler(event, data)
         
+        # Check if callback is exempt
+        if event.data and any(pattern in event.data for pattern in self.exempt_patterns):
+            return await handler(event, data)
+        
         # Check cooldown
         now = datetime.now()
         last_callback = self.user_last_callback.get(user_id)
@@ -223,4 +272,5 @@ class CallbackRateLimitMiddleware(BaseMiddleware):
         # Update last callback time
         self.user_last_callback[user_id] = now
         
-        #
+        # Process the callback
+        return await handler(event, data)

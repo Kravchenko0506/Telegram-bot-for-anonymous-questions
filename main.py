@@ -9,7 +9,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
+from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, CallbackQuery
 
 from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
 from models.database import init_db, close_db, check_db_connection
@@ -206,6 +206,7 @@ async def main() -> None:
         
         # Start bot polling
         logger.info("Bot is starting polling...")
+        
         await dp.start_polling(bot)
         
     except KeyboardInterrupt:

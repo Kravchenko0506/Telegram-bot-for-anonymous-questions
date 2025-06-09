@@ -44,20 +44,27 @@ async def user_callback_handler(callback: CallbackQuery):
     if user_id == ADMIN_ID:
         return
     
+    logger.info(f"User {user_id} clicked callback: {callback.data}")
+    
     if callback.data == "ask_another_question":
-        # Allow user to ask another question
-        success = await UserStateManager.allow_new_question(user_id)
-        
-        if success:
-            await callback.message.edit_text(
-                "✍️ <b>Напишите ваш новый вопрос:</b>\n\n"
-                f"<i>Максимальная длина: {MAX_QUESTION_LENGTH} символов</i>",
-                reply_markup=None
-            )
-            await callback.answer("Теперь можете написать новый вопрос")
-            logger.info(f"User {user_id} started asking new question")
-        else:
-            await callback.answer("❌ Произошла ошибка", show_alert=True)
+        try:
+            # Allow user to ask another question
+            success = await UserStateManager.allow_new_question(user_id)
+            
+            if success:
+                await callback.message.edit_text(
+                    "✍️ <b>Напишите ваш новый вопрос:</b>\n\n"
+                    f"<i>Максимальная длина: {MAX_QUESTION_LENGTH} символов</i>",
+                    reply_markup=None
+                )
+                await callback.answer("Теперь можете написать новый вопрос")
+                logger.info(f"User {user_id} started asking new question")
+            else:
+                await callback.answer("❌ Произошла ошибка при изменении состояния", show_alert=True)
+                logger.error(f"Failed to change state for user {user_id}")
+        except Exception as e:
+            logger.error(f"Error handling callback for user {user_id}: {e}")
+            await callback.answer("❌ Произошла ошибка. Попробуйте еще раз.", show_alert=True)
 
 
 @router.message()
@@ -75,10 +82,16 @@ async def unified_message_handler(message: Message):
     # Check if admin is in answer mode first
     if user_id == ADMIN_ID:
         # Import here to avoid circular imports
-        from handlers.admin_states import is_admin_in_answer_mode, handle_admin_answer
+        from handlers.admin_states import handle_admin_answer, admin_answer_states
         
         # Check if admin is in answer mode
-        if await is_admin_in_answer_mode(user_id):
+        # Прямая проверка состояния
+        in_answer_mode = (
+            user_id in admin_answer_states and 
+            admin_answer_states[user_id].get('mode') == 'waiting_answer'
+        )
+        
+        if in_answer_mode:
             await handle_admin_answer(message)
             return
         
@@ -98,6 +111,9 @@ async def unified_message_handler(message: Message):
 async def handle_user_message(message: Message):
     """Handle messages from regular users with state management."""
     user_id = message.from_user.id
+    
+    # TODO: Auto-reset old state if needed (30 minutes timeout)
+    # await UserStateManager.auto_reset_if_needed(user_id, timeout_minutes=30)
     
     # Check if user can send a question
     can_send = await UserStateManager.can_send_question(user_id)

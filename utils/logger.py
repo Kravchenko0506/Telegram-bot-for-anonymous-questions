@@ -23,7 +23,7 @@ def configure_logger(
     """
     logger = logging.getLogger(logger_name)
 
-    logger.propagate = True
+    logger.propagate = False  # Prevents messages from propagating to the root logger
     
     if not logger.level or logger.level > level:
         logger.setLevel(level)
