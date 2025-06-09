@@ -61,11 +61,17 @@ class PeriodicTaskManager:
         """Clean up expired admin states every hour."""
         while self.running:
             try:
-                # Import here to avoid circular imports
-                from handlers.admin_states import cleanup_expired_states
-                
                 logger.debug("Running expired states cleanup...")
-                cleanup_expired_states()
+                
+                # ИСПРАВЛЕНО: Используем AdminStateManager вместо старой функции
+                from models.admin_state import AdminStateManager
+                
+                cleaned_count = await AdminStateManager.cleanup_expired_states()
+                
+                if cleaned_count > 0:
+                    logger.info(f"Cleaned up {cleaned_count} expired admin states")
+                else:
+                    logger.debug("No expired admin states found")
                 
                 # Run every hour
                 await asyncio.sleep(3600)

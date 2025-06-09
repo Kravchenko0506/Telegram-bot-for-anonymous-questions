@@ -155,6 +155,51 @@ async def on_startup(bot: Bot) -> None:
         logger.error(f"Failed to notify admin on startup: {e}")
 
 
+async def main() -> None:
+    """
+    Main application entry point.
+    """
+    try:
+        logger.info("Starting Anonymous Questions Bot (Production Mode)...")
+        
+        # Initialize database
+        logger.info("Initializing PostgreSQL database...")
+        await init_db()
+        
+        # Setup bot and dispatcher
+        bot, dp = await setup_bot()
+        
+        # Setup bot menu
+        await setup_bot_menu(bot)
+        
+        # Register handlers
+        await register_handlers(dp)
+        
+        
+        dp.startup.register(lambda: on_startup(bot))  
+        dp.shutdown.register(lambda: on_shutdown(bot))
+        
+        # Start bot polling
+        logger.info("Bot is starting polling...")
+        
+        await dp.start_polling(bot)
+        
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user (Ctrl+C)")
+        
+    except Exception as e:
+        logger.error(f"Critical error: {e}")
+        raise
+        
+    finally:
+        # Cleanup resources
+        try:
+            await close_db()
+            logger.info("Database connections closed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+
+
 async def on_shutdown(bot: Bot) -> None:
     """Actions to perform on bot shutdown."""
     logger.info("Running shutdown tasks...")

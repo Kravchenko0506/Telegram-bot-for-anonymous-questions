@@ -1,5 +1,8 @@
 """
-Admin States - with Error Protection
+Admin States - Database Only Version
+
+Полностью переписанный модуль без использования словаря в памяти.
+Все состояния сохраняются в PostgreSQL для надежности.
 """
 
 from aiogram import Router
@@ -213,6 +216,7 @@ async def cancel_answer_mode(callback: CallbackQuery):
         await callback.answer("Режим ответа уже завершен")
 
 
+# ИСПРАВЛЕНИЕ: Убираем await из этой функции - она НЕ асинхронная
 def is_admin_in_answer_mode(admin_id: int) -> bool:
     """Check if admin is currently in answer mode."""
     # Clean up expired states first

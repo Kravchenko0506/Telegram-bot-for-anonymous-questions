@@ -101,16 +101,19 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         if self.notify_admin and self._is_critical_error(error):
             await self._notify_admin(error, context)
     
-    def _extract_context(self, event: Update, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_context(self, event: Union[Update, Message, CallbackQuery], data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract context from update."""
         context = {
             'timestamp': datetime.now().isoformat(),
             'handler': data.get('handler', 'unknown')
         }
         
-        # Extract update_id if available
+        # ИСПРАВЛЕНИЕ: Правильное извлечение update_id
         if hasattr(event, 'update_id'):
             context['update_id'] = event.update_id
+        elif hasattr(event, 'message') and hasattr(event.message, 'message_id'):
+            # Для Message объектов используем message_id вместо update_id
+            context['message_id'] = event.message.message_id
         
         # Extract user info based on event type
         if hasattr(event, 'message') and event.message:

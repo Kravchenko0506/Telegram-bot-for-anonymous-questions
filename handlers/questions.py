@@ -1,7 +1,5 @@
 """
-Questions Handler - Production Version with Validation
-
-Handles user questions with validation, sanitization, and state management.
+Questions Handler - Updated for Database State Management
 """
 
 from aiogram import Router
@@ -22,6 +20,7 @@ from config import (
 from models.database import async_session
 from models.questions import Question
 from models.user_states import UserStateManager
+from models.admin_state import AdminStateManager
 from utils.validators import InputValidator, ContentModerator
 from keyboards.inline import (
     get_admin_question_keyboard, 
@@ -82,14 +81,10 @@ async def unified_message_handler(message: Message):
     # Check if admin is in answer mode first
     if user_id == ADMIN_ID:
         # Import here to avoid circular imports
-        from handlers.admin_states import handle_admin_answer, admin_answer_states
+        from handlers.admin_states import handle_admin_answer, is_admin_in_answer_mode
         
-        # Check if admin is in answer mode
-        # Прямая проверка состояния
-        in_answer_mode = (
-            user_id in admin_answer_states and 
-            admin_answer_states[user_id].get('mode') == 'waiting_answer'
-        )
+        # ИСПРАВЛЕНИЕ: Убираем await - функция НЕ асинхронная
+        in_answer_mode = is_admin_in_answer_mode(user_id)
         
         if in_answer_mode:
             await handle_admin_answer(message)
@@ -111,9 +106,6 @@ async def unified_message_handler(message: Message):
 async def handle_user_message(message: Message):
     """Handle messages from regular users with state management."""
     user_id = message.from_user.id
-    
-    # TODO: Auto-reset old state if needed (30 minutes timeout)
-    # await UserStateManager.auto_reset_if_needed(user_id, timeout_minutes=30)
     
     # Check if user can send a question
     can_send = await UserStateManager.can_send_question(user_id)
@@ -282,7 +274,6 @@ async def handle_admin_reply(message: Message):
             try:
                 # Add inline button for user to ask another question
                 from keyboards.inline import get_user_question_sent_keyboard
-                from models.user_states import UserStateManager
                 keyboard = get_user_question_sent_keyboard()
                 
                 # Combine answer with button in one message

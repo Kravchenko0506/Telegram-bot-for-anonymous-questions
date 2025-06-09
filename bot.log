@@ -978,3 +978,141 @@ AttributeError: 'Message' object has no attribute 'update_id'
 2025-06-09 13:55:50,143 - models.database - INFO - PostgreSQL + asyncpg connection successful
 2025-06-09 14:00:50,148 - models.database - INFO - PostgreSQL + asyncpg connection successful
 2025-06-09 14:05:50,149 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:10:50,165 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:15:50,160 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:20:50,178 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:25:50,187 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:30:50,201 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:35:50,356 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:40:50,365 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:45:50,369 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:50:50,476 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 14:55:50,482 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:00:50,484 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:05:50,498 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:10:50,518 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:15:50,521 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:20:50,539 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:25:50,535 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:30:50,552 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:35:50,652 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:40:50,665 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:45:50,678 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:50:50,798 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 15:55:50,811 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:00:50,826 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:05:50,828 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:10:50,845 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:15:50,869 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:20:50,875 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:25:50,879 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:30:50,882 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:35:51,098 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:40:51,111 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:45:51,115 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:50:51,220 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 16:55:51,235 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:00:51,246 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:05:51,250 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:10:51,277 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:15:51,281 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:20:51,299 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:25:51,317 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:30:51,339 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:35:51,448 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:40:51,465 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:45:51,466 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:50:51,562 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 17:55:51,587 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:00:51,597 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:05:51,611 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:10:51,617 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:15:51,633 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:20:51,640 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:25:51,647 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:30:51,649 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:35:51,659 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:40:51,751 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:45:51,765 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:50:51,789 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 18:55:51,879 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:00:51,892 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:05:51,887 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:10:51,885 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:15:51,894 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:20:51,910 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:25:51,918 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:30:51,915 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:35:51,926 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:40:52,029 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:45:52,037 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:50:52,042 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 19:55:52,128 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:00:52,132 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:05:52,139 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:10:52,148 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:15:52,153 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:20:52,164 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:25:52,165 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:30:52,167 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:35:52,176 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:40:52,187 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:45:52,293 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:50:52,298 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 20:55:52,310 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:00:52,431 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:05:52,436 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:10:52,449 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:15:52,445 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:20:52,452 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:25:52,460 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:30:52,461 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:35:53,757 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:40:53,771 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:45:53,782 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:46:23,360 - models.database - INFO - Database engine closed successfully
+2025-06-09 21:46:37,710 - models.database - INFO - Default settings initialized
+2025-06-09 21:46:37,710 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 21:46:38,067 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:46:38,081 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:51:38,106 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:51:38,704 - models.database - INFO - Database engine closed successfully
+2025-06-09 21:51:54,091 - models.database - INFO - Default settings initialized
+2025-06-09 21:51:54,091 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 21:51:54,474 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:51:54,525 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 21:56:54,526 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:01:54,547 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:03:11,771 - models.database - INFO - Database engine closed successfully
+2025-06-09 22:03:31,382 - models.database - INFO - Default settings initialized
+2025-06-09 22:03:31,384 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:03:31,591 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:03:31,629 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:06:19,719 - models.database - INFO - Default settings initialized
+2025-06-09 22:06:19,719 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:06:20,003 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:06:20,011 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:11:20,015 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:12:53,986 - models.database - INFO - Database engine closed successfully
+2025-06-09 22:12:59,791 - models.database - INFO - Default settings initialized
+2025-06-09 22:12:59,791 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:13:00,026 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:13:00,114 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:16:41,921 - models.database - INFO - Database engine closed successfully
+2025-06-09 22:16:47,516 - models.database - INFO - Default settings initialized
+2025-06-09 22:16:47,516 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:16:47,954 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:16:48,177 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:21:48,196 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:26:48,201 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:29:52,421 - models.database - INFO - Database engine closed successfully
+2025-06-09 22:29:59,067 - models.database - INFO - Default settings initialized
+2025-06-09 22:29:59,067 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:29:59,329 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:29:59,422 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:30:45,396 - models.database - INFO - Database engine closed successfully
+2025-06-09 22:30:52,044 - models.database - INFO - Default settings initialized
+2025-06-09 22:30:52,044 - models.database - INFO - Database initialized successfully (Questions + Settings tables)
+2025-06-09 22:30:52,297 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:30:52,391 - models.database - INFO - PostgreSQL + asyncpg connection successful
+2025-06-09 22:35:52,397 - models.database - INFO - PostgreSQL + asyncpg connection successful

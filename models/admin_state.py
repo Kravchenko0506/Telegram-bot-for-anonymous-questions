@@ -9,69 +9,60 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
 from models.database import Base, async_session
+from utils.logger import get_admin_logger
+
+logger = get_admin_logger()
 
 
 class AdminState(Base):
     """
     Model for storing admin states in database.
-    
-    Replaces in-memory storage to persist states across bot restarts.
     """
     
     __tablename__ = "admin_states"
 
-    # Primary key
     admin_id = Column(BigInteger, primary_key=True)
-    """Admin's Telegram user ID"""
-    
-    # State information
     state_type = Column(String(50), nullable=False)
-    """Type of state: 'answering_question', etc."""
-    
     state_data = Column(JSON, nullable=False, default=dict)
-    """JSON data for the state (question_id, etc.)"""
     
-    # Timestamps
-    created_at = Column(
-        DateTime(timezone=True), 
-        server_default=func.now(), 
-        nullable=False
-    )
-    """When this state was created"""
-    
+    # Timestamps с timezone=True
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
-    """When this state should expire"""
-    
-    updated_at = Column(
-        DateTime(timezone=True), 
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False
-    )
-    """Last update time"""
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<AdminState(admin_id={self.admin_id}, type='{self.state_type}', data={self.state_data})>"
-    
-    @property
-    def is_expired(self) -> bool:
-        """Check if state has expired."""
-        return datetime.utcnow() > self.expires_at
-    
-    @property
-    def time_remaining(self) -> timedelta:
-        """Get time remaining before expiration."""
-        return self.expires_at - datetime.utcnow()
+        return f"<AdminState(admin_id={self.admin_id}, type='{self.state_type}', expires={self.expires_at})>"
 
 
 class AdminStateManager:
-    """Manager class for admin states with database backend."""
+    """Manager class for admin states - ИСПРАВЛЕН для работы с timezone"""
     
-    # State types
     STATE_ANSWERING = "answering_question"
-    
-    # Default expiration time (10 minutes)
     DEFAULT_EXPIRATION_MINUTES = 10
+    
+    @staticmethod
+    def _get_utc_now():
+        """Get current UTC datetime - БЕЗ timezone info для совместимости"""
+        return datetime.utcnow()
+    
+    @staticmethod
+    def _convert_from_db(db_datetime):
+        """
+        Конвертировать datetime из БД в naive UTC
+        
+        PostgreSQL возвращает timezone-aware datetime в UTC.
+        Конвертируем в naive UTC для единообразия.
+        """
+        if db_datetime is None:
+            return None
+        
+        # Если datetime уже naive, возвращаем как есть
+        if not hasattr(db_datetime, 'tzinfo') or db_datetime.tzinfo is None:
+            return db_datetime
+        
+        # Если timezone-aware, конвертируем в naive UTC
+        # PostgreSQL всегда возвращает в UTC, просто убираем tzinfo
+        return db_datetime.replace(tzinfo=None)
     
     @staticmethod
     async def set_state(
@@ -80,32 +71,23 @@ class AdminStateManager:
         state_data: Dict[str, Any],
         expiration_minutes: int = DEFAULT_EXPIRATION_MINUTES
     ) -> bool:
-        """
-        Set admin state in database.
-        
-        Args:
-            admin_id: Admin's Telegram ID
-            state_type: Type of state
-            state_data: State data as dictionary
-            expiration_minutes: Minutes until expiration
-            
-        Returns:
-            bool: Success status
-        """
+        """Set admin state in database."""
         try:
+            # Создаем naive UTC datetime для expires_at
+            expires_at = AdminStateManager._get_utc_now() + timedelta(minutes=expiration_minutes)
+            
+            logger.info(f"Setting state for admin {admin_id}: {state_type} (expires in {expiration_minutes}min)")
+            logger.debug(f"Expires at (naive UTC): {expires_at}")
+            
             async with async_session() as session:
-                # Check if state exists
                 existing = await session.get(AdminState, admin_id)
                 
-                expires_at = datetime.utcnow() + timedelta(minutes=expiration_minutes)
-                
                 if existing:
-                    # Update existing state
                     existing.state_type = state_type
                     existing.state_data = state_data
                     existing.expires_at = expires_at
+                    logger.info(f"Updated state for admin {admin_id}")
                 else:
-                    # Create new state
                     new_state = AdminState(
                         admin_id=admin_id,
                         state_type=state_type,
@@ -113,6 +95,7 @@ class AdminStateManager:
                         expires_at=expires_at
                     )
                     session.add(new_state)
+                    logger.info(f"Created state for admin {admin_id}")
                 
                 await session.commit()
                 return True
@@ -123,15 +106,7 @@ class AdminStateManager:
     
     @staticmethod
     async def get_state(admin_id: int) -> Optional[Dict[str, Any]]:
-        """
-        Get admin state from database.
-        
-        Args:
-            admin_id: Admin's Telegram ID
-            
-        Returns:
-            State data or None if not found/expired
-        """
+        """Get admin state from database."""
         try:
             async with async_session() as session:
                 state = await session.get(AdminState, admin_id)
@@ -139,18 +114,31 @@ class AdminStateManager:
                 if not state:
                     return None
                 
-                # Check expiration
-                if state.is_expired:
-                    # Delete expired state
+                # Конвертируем datetime из БД в naive UTC
+                now_utc = AdminStateManager._get_utc_now()
+                expires_at = AdminStateManager._convert_from_db(state.expires_at)
+                
+                logger.debug(f"State check for admin {admin_id}:")
+                logger.debug(f"  Now (naive UTC): {now_utc}")
+                logger.debug(f"  Expires (from DB): {expires_at}")
+                logger.debug(f"  Raw from DB: {state.expires_at}")
+                
+                # Проверяем истечение
+                if now_utc > expires_at:
+                    time_diff = now_utc - expires_at
+                    logger.info(f"State for admin {admin_id} expired {time_diff} ago, removing")
                     await session.delete(state)
                     await session.commit()
                     return None
                 
+                time_remaining = expires_at - now_utc
+                logger.debug(f"State for admin {admin_id} valid, expires in {time_remaining}")
+                
                 return {
                     'type': state.state_type,
                     'data': state.state_data,
-                    'created_at': state.created_at,
-                    'expires_at': state.expires_at
+                    'created_at': AdminStateManager._convert_from_db(state.created_at),
+                    'expires_at': expires_at
                 }
                 
         except Exception as e:
@@ -159,15 +147,7 @@ class AdminStateManager:
     
     @staticmethod
     async def clear_state(admin_id: int) -> bool:
-        """
-        Clear admin state from database.
-        
-        Args:
-            admin_id: Admin's Telegram ID
-            
-        Returns:
-            bool: Success status
-        """
+        """Clear admin state from database."""
         try:
             async with async_session() as session:
                 state = await session.get(AdminState, admin_id)
@@ -175,6 +155,7 @@ class AdminStateManager:
                 if state:
                     await session.delete(state)
                     await session.commit()
+                    logger.info(f"Cleared state for admin {admin_id}")
                 
                 return True
                 
@@ -184,40 +165,41 @@ class AdminStateManager:
     
     @staticmethod
     async def is_in_state(admin_id: int, state_type: str) -> bool:
-        """
-        Check if admin is in specific state.
-        
-        Args:
-            admin_id: Admin's Telegram ID
-            state_type: State type to check
+        """Check if admin is in specific state."""
+        try:
+            state = await AdminStateManager.get_state(admin_id)
+            result = state is not None and state['type'] == state_type
             
-        Returns:
-            bool: True if in specified state
-        """
-        state = await AdminStateManager.get_state(admin_id)
-        return state is not None and state['type'] == state_type
+            logger.debug(f"Admin {admin_id} is_in_state({state_type}): {result}")
+            if state:
+                expires_in = state['expires_at'] - AdminStateManager._get_utc_now()
+                logger.debug(f"  State expires in: {expires_in}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error checking admin state: {e}")
+            return False
     
     @staticmethod
     async def cleanup_expired_states() -> int:
-        """
-        Clean up all expired states from database.
-        
-        Returns:
-            int: Number of states cleaned
-        """
+        """Clean up all expired states from database."""
         try:
             async with async_session() as session:
                 from sqlalchemy import select, delete
                 
-                # Find expired states
-                stmt = delete(AdminState).where(
-                    AdminState.expires_at < datetime.utcnow()
-                )
+                now_utc = AdminStateManager._get_utc_now()
+                
+                # Удаляем состояния где expires_at < now (PostgreSQL сам сконвертирует)
+                stmt = delete(AdminState).where(AdminState.expires_at < now_utc)
                 
                 result = await session.execute(stmt)
                 await session.commit()
                 
-                return result.rowcount
+                cleaned_count = result.rowcount
+                if cleaned_count > 0:
+                    logger.info(f"Cleaned up {cleaned_count} expired admin states")
+                
+                return cleaned_count
                 
         except Exception as e:
             logger.error(f"Failed to cleanup expired states: {e}")
@@ -225,19 +207,13 @@ class AdminStateManager:
     
     @staticmethod
     async def get_all_active_states() -> list[Dict[str, Any]]:
-        """
-        Get all active (non-expired) states.
-        
-        Returns:
-            List of active states
-        """
+        """Get all active (non-expired) states."""
         try:
             async with async_session() as session:
                 from sqlalchemy import select
                 
-                stmt = select(AdminState).where(
-                    AdminState.expires_at > datetime.utcnow()
-                )
+                now_utc = AdminStateManager._get_utc_now()
+                stmt = select(AdminState).where(AdminState.expires_at > now_utc)
                 
                 result = await session.execute(stmt)
                 states = result.scalars().all()
@@ -247,7 +223,8 @@ class AdminStateManager:
                         'admin_id': state.admin_id,
                         'type': state.state_type,
                         'data': state.state_data,
-                        'expires_at': state.expires_at
+                        'created_at': AdminStateManager._convert_from_db(state.created_at),
+                        'expires_at': AdminStateManager._convert_from_db(state.expires_at)
                     }
                     for state in states
                 ]
@@ -255,8 +232,3 @@ class AdminStateManager:
         except Exception as e:
             logger.error(f"Failed to get all active states: {e}")
             return []
-
-
-# Import logger
-from utils.logger import get_admin_logger
-logger = get_admin_logger()
