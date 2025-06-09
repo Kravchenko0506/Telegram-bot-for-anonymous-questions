@@ -6,7 +6,6 @@ Contains all inline keyboard layouts for admin question management.
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-
 def get_admin_question_keyboard(question_id: int, is_favorite: bool = False) -> InlineKeyboardMarkup:
     """Create inline keyboard for admin question management."""
     favorite_text = "⭐ Убрать из избранного" if is_favorite else "⭐ Добавить в избранное"

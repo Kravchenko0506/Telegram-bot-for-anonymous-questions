@@ -65,7 +65,7 @@ class PeriodicTaskManager:
                 from handlers.admin_states import cleanup_expired_states
                 
                 logger.debug("Running expired states cleanup...")
-                await cleanup_expired_states()
+                cleanup_expired_states()
                 
                 # Run every hour
                 await asyncio.sleep(3600)

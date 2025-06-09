@@ -23,7 +23,8 @@ def configure_logger(
     """
     logger = logging.getLogger(logger_name)
 
-
+    logger.propagate = True
+    
     if not logger.level or logger.level > level:
         logger.setLevel(level)
 

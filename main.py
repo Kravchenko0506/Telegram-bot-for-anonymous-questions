@@ -128,7 +128,7 @@ async def register_handlers(dp: Dispatcher) -> None:
     logger.info("All handlers registered successfully")
 
 
-async def on_startup(bot: Bot, dp: Dispatcher) -> None:
+async def on_startup(bot: Bot) -> None:
     """Actions to perform on bot startup."""
     logger.info("Running startup tasks...")
     
@@ -155,7 +155,7 @@ async def on_startup(bot: Bot, dp: Dispatcher) -> None:
         logger.error(f"Failed to notify admin on startup: {e}")
 
 
-async def on_shutdown(bot: Bot, dp: Dispatcher) -> None:
+async def on_shutdown(bot: Bot) -> None:
     """Actions to perform on bot shutdown."""
     logger.info("Running shutdown tasks...")
     
@@ -201,8 +201,8 @@ async def main() -> None:
         await register_handlers(dp)
         
         # Set startup and shutdown hooks
-        dp.startup.register(lambda: on_startup(bot, dp))
-        dp.shutdown.register(lambda: on_shutdown(bot, dp))
+        dp.startup.register( on_startup)
+        dp.shutdown.register(on_shutdown)
         
         # Start bot polling
         logger.info("Bot is starting polling...")
@@ -244,14 +244,14 @@ if __name__ == "__main__":
     logging.getLogger('aiogram').setLevel(logging.WARNING)
     logging.getLogger('asyncio').setLevel(logging.WARNING)
     
-    print("🚀 Starting bot in PRODUCTION mode...")
+    print("🚀 Starting bot...")
     print("📁 Logs: console + bot.log file")
     print("🔒 Security features enabled")
     
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n✋ Bot stopped by user")
+        print("\n Bot stopped")
     except Exception as e:
         print(f"❌ Failed to start bot: {e}")
         logging.exception("Critical startup error")

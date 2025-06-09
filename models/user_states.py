@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 from models.database import Base, async_session
 
-
 class UserState(Base):
     """
     Model for tracking user states in the bot.
