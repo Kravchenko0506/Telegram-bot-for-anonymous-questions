@@ -73,6 +73,20 @@ DB_PORT: str = get_env_var("DB_PORT")
 DB_NAME: str = get_env_var("DB_NAME")
 """PostgreSQL database name"""
 
+# Pagination Settings
+QUESTIONS_PER_PAGE: int = get_env_int("QUESTIONS_PER_PAGE", default=5, required=False)
+"""Number of questions to show per page in admin interface"""
+
+MAX_PAGES_TO_SHOW: int = get_env_int("MAX_PAGES_TO_SHOW", default=100, required=False)
+"""Maximum number of pages to show (prevents memory issues with huge databases)"""
+
+# Admin Interface Settings
+ADMIN_AUTO_REFRESH: bool = get_env_var("ADMIN_AUTO_REFRESH", default="false", required=False).lower() == "true"
+"""Whether to auto-refresh admin lists after actions"""
+
+SHOW_QUESTION_PREVIEW_LENGTH: int = get_env_int("SHOW_QUESTION_PREVIEW_LENGTH", default=200, required=False)
+"""Length of question preview in admin interface"""
+
 # Bot Settings - OPTIONAL with safe defaults
 MAX_QUESTION_LENGTH: int = get_env_int("MAX_QUESTION_LENGTH", default=2500, required=False)
 """Maximum length of a question in characters"""

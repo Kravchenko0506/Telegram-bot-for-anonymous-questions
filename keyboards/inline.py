@@ -1,7 +1,7 @@
 """
 Inline Keyboards for Anonymous Questions Bot
 
-Contains all inline keyboard layouts for admin question management.
+Contains all inline keyboard layouts for admin question management with pagination.
 """
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -147,7 +147,17 @@ def get_pagination_keyboard(
     total_pages: int,
     callback_prefix: str
 ) -> InlineKeyboardMarkup:
-    """Create pagination keyboard for question lists."""
+    """
+    Create pagination keyboard for question lists.
+    
+    Args:
+        current_page: Current page number (0-based)
+        total_pages: Total number of pages
+        callback_prefix: Prefix for callback data (e.g., "pending_page", "favorites_page")
+    
+    Returns:
+        InlineKeyboardMarkup: Pagination keyboard
+    """
     buttons = []
     
     # Previous page button
@@ -155,15 +165,15 @@ def get_pagination_keyboard(
         buttons.append(
             InlineKeyboardButton(
                 text="⬅️ Назад",
-                callback_data=f"{callback_prefix}:page:{current_page - 1}"
+                callback_data=f"{callback_prefix}:{current_page - 1}"
             )
         )
     
-    # Page indicator
+    # Page indicator (show current/total)
     buttons.append(
         InlineKeyboardButton(
-            text=f"{current_page + 1}/{total_pages}",
-            callback_data="noop"
+            text=f"📄 {current_page + 1}/{total_pages}",
+            callback_data="noop"  # Non-functional button for display only
         )
     )
     
@@ -172,10 +182,11 @@ def get_pagination_keyboard(
         buttons.append(
             InlineKeyboardButton(
                 text="Вперед ➡️",
-                callback_data=f"{callback_prefix}:page:{current_page + 1}"
+                callback_data=f"{callback_prefix}:{current_page + 1}"
             )
         )
     
+    # If only one button (page indicator), still show it
     keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons])
     return keyboard
 
@@ -235,4 +246,98 @@ def get_clear_confirmation_keyboard() -> InlineKeyboardMarkup:
         ]
     )
     
+    return keyboard
+
+
+def get_advanced_pagination_keyboard(
+    current_page: int,
+    total_pages: int,
+    callback_prefix: str,
+    show_first_last: bool = True
+) -> InlineKeyboardMarkup:
+    """
+    Create advanced pagination keyboard with first/last page buttons.
+    
+    Args:
+        current_page: Current page number (0-based)
+        total_pages: Total number of pages
+        callback_prefix: Prefix for callback data
+        show_first_last: Whether to show first/last page buttons
+    
+    Returns:
+        InlineKeyboardMarkup: Advanced pagination keyboard
+    """
+    if total_pages <= 1:
+        return None
+    
+    buttons = []
+    
+    # First row: First, Previous, Page indicator, Next, Last
+    first_row = []
+    
+    # First page button (only if not on first page and more than 3 pages)
+    if show_first_last and current_page > 1 and total_pages > 3:
+        first_row.append(
+            InlineKeyboardButton(
+                text="⏮️ Первая",
+                callback_data=f"{callback_prefix}:0"
+            )
+        )
+    
+    # Previous page button
+    if current_page > 0:
+        first_row.append(
+            InlineKeyboardButton(
+                text="⬅️ Назад",
+                callback_data=f"{callback_prefix}:{current_page - 1}"
+            )
+        )
+    
+    # Current page indicator
+    first_row.append(
+        InlineKeyboardButton(
+            text=f"📄 {current_page + 1}/{total_pages}",
+            callback_data="noop"
+        )
+    )
+    
+    # Next page button
+    if current_page < total_pages - 1:
+        first_row.append(
+            InlineKeyboardButton(
+                text="Вперед ➡️",
+                callback_data=f"{callback_prefix}:{current_page + 1}"
+            )
+        )
+    
+    # Last page button (only if not on last page and more than 3 pages)
+    if show_first_last and current_page < total_pages - 2 and total_pages > 3:
+        first_row.append(
+            InlineKeyboardButton(
+                text="⏭️ Последняя",
+                callback_data=f"{callback_prefix}:{total_pages - 1}"
+            )
+        )
+    
+    buttons.append(first_row)
+    
+    # Second row: Quick jump buttons for nearby pages (optional)
+    if total_pages > 5:
+        second_row = []
+        start_page = max(0, current_page - 2)
+        end_page = min(total_pages - 1, current_page + 2)
+        
+        for page in range(start_page, end_page + 1):
+            if page != current_page:  # Don't show current page button
+                second_row.append(
+                    InlineKeyboardButton(
+                        text=str(page + 1),
+                        callback_data=f"{callback_prefix}:{page}"
+                    )
+                )
+        
+        if len(second_row) > 0:
+            buttons.append(second_row)
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard

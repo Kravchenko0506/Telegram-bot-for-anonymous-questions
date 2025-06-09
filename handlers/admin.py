@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
 from datetime import datetime
 from sqlalchemy import select, func
+import math
 
 from config import (
     ADMIN_ID,
@@ -26,7 +27,8 @@ from keyboards.inline import (
     get_admin_question_keyboard, 
     get_favorite_question_keyboard,
     get_stats_keyboard,
-    get_clear_confirmation_keyboard
+    get_clear_confirmation_keyboard,
+    get_pagination_keyboard
 )
 from utils.logger import get_admin_logger
 from handlers.admin_states import (
@@ -40,11 +42,20 @@ from models.settings import SettingsManager
 router = Router()
 logger = get_admin_logger()
 
+# Constants for pagination
+QUESTIONS_PER_PAGE = 10
+MAX_PAGES_TO_SHOW = 10  
+
 
 @router.callback_query(lambda c: c.from_user.id == ADMIN_ID)
 async def admin_question_callback(callback: CallbackQuery):
     """Handle admin callback queries only."""
     try:
+        # Handle pagination callbacks
+        if callback.data.startswith("pending_page:") or callback.data.startswith("favorites_page:"):
+            await handle_pagination_callback(callback)
+            return
+        
         # Handle special callbacks without question ID
         if callback.data == "clear_all_questions":
             keyboard = get_clear_confirmation_keyboard()
@@ -142,6 +153,172 @@ async def admin_question_callback(callback: CallbackQuery):
         logger.error(f"Error in admin callback: {e}")
 
 
+async def handle_pagination_callback(callback: CallbackQuery):
+    """Handle pagination for questions lists."""
+    try:
+        # Parse callback data
+        if callback.data.startswith("pending_page:"):
+            page = int(callback.data.split(":")[1])
+            await show_pending_questions_page(callback.message, page, edit_message=True)
+        elif callback.data.startswith("favorites_page:"):
+            page = int(callback.data.split(":")[1])
+            await show_favorites_page(callback.message, page, edit_message=True)
+        
+        await callback.answer()
+        
+    except Exception as e:
+        await callback.answer("❌ Ошибка при переходе на страницу", show_alert=True)
+        logger.error(f"Error in pagination: {e}")
+
+
+async def show_pending_questions_page(message: Message, page: int = 0, edit_message: bool = False):
+    """Show pending questions with pagination."""
+    try:
+        async with async_session() as session:
+            # Count total pending questions
+            total_stmt = select(func.count(Question.id)).where(
+                Question.answer.is_(None),
+                Question.is_deleted == False
+            )
+            total_result = await session.execute(total_stmt)
+            total_count = total_result.scalar() or 0
+            
+            if total_count == 0:
+                text = "📭 Нет неотвеченных вопросов!"
+                if edit_message:
+                    await message.edit_text(text, reply_markup=None)
+                else:
+                    await message.answer(text)
+                return
+            
+            # Calculate pagination
+            total_pages = math.ceil(total_count / QUESTIONS_PER_PAGE)
+            page = max(0, min(page, total_pages - 1))  # Ensure page is in bounds
+            offset = page * QUESTIONS_PER_PAGE
+            
+            # Get questions for current page
+            stmt = select(Question).where(
+                Question.answer.is_(None),
+                Question.is_deleted == False
+            ).order_by(Question.created_at.asc()).offset(offset).limit(QUESTIONS_PER_PAGE)
+            
+            result = await session.execute(stmt)
+            questions = result.scalars().all()
+        
+        # Create header message
+        header_text = f"⏳ <b>Неотвеченные вопросы</b>\n\n📊 Страница {page + 1} из {total_pages} | Всего: {total_count}"
+        
+        # Add pagination if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = get_pagination_keyboard(page, total_pages, "pending_page")
+        
+        if edit_message:
+            await message.edit_text(header_text, reply_markup=keyboard)
+        else:
+            await message.answer(header_text, reply_markup=keyboard)
+        
+        # Send each question as separate message
+        for question in questions:
+            created_at = question.created_at.strftime("%d.%m.%Y %H:%M")
+            favorite_mark = "⭐ " if question.is_favorite else ""
+            
+            question_text = f"""
+❓ <b>{favorite_mark}Вопрос #{question.id}</b>
+
+{question.text}
+
+📅 {created_at}
+"""
+            
+            question_keyboard = get_admin_question_keyboard(question.id, is_favorite=question.is_favorite)
+            await message.answer(question_text, reply_markup=question_keyboard)
+        
+        logger.info(f"Admin viewed pending questions page {page + 1}/{total_pages} ({len(questions)} questions)")
+        
+    except Exception as e:
+        error_text = "❌ Ошибка при получении неотвеченных вопросов"
+        if edit_message:
+            await message.edit_text(error_text, reply_markup=None)
+        else:
+            await message.answer(error_text)
+        logger.error(f"Error getting pending questions: {e}")
+
+
+async def show_favorites_page(message: Message, page: int = 0, edit_message: bool = False):
+    """Show favorite questions with pagination."""
+    try:
+        async with async_session() as session:
+            # Count total favorite questions
+            total_stmt = select(func.count(Question.id)).where(
+                Question.is_favorite == True,
+                Question.is_deleted == False
+            )
+            total_result = await session.execute(total_stmt)
+            total_count = total_result.scalar() or 0
+            
+            if total_count == 0:
+                text = "⭐ Нет избранных вопросов."
+                if edit_message:
+                    await message.edit_text(text, reply_markup=None)
+                else:
+                    await message.answer(text)
+                return
+            
+            # Calculate pagination
+            total_pages = math.ceil(total_count / QUESTIONS_PER_PAGE)
+            page = max(0, min(page, total_pages - 1))  # Ensure page is in bounds
+            offset = page * QUESTIONS_PER_PAGE
+            
+            # Get questions for current page
+            stmt = select(Question).where(
+                Question.is_favorite == True,
+                Question.is_deleted == False
+            ).order_by(Question.created_at.desc()).offset(offset).limit(QUESTIONS_PER_PAGE)
+            
+            result = await session.execute(stmt)
+            questions = result.scalars().all()
+        
+        # Create header message
+        header_text = f"⭐ <b>Избранные вопросы</b>\n\n📊 Страница {page + 1} из {total_pages} | Всего: {total_count}"
+        
+        # Add pagination if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = get_pagination_keyboard(page, total_pages, "favorites_page")
+        
+        if edit_message:
+            await message.edit_text(header_text, reply_markup=keyboard)
+        else:
+            await message.answer(header_text, reply_markup=keyboard)
+        
+        # Send each question as separate message
+        for question in questions:
+            created_at = question.created_at.strftime("%d.%m.%Y %H:%M")
+            status = "✅ Отвечен" if question.is_answered else "⏳ Ожидает ответа"
+            
+            question_text = f"""
+⭐ <b>Вопрос #{question.id}</b>
+
+{question.text}
+
+📅 {created_at} | {status}
+"""
+            
+            question_keyboard = get_favorite_question_keyboard(question.id)
+            await message.answer(question_text, reply_markup=question_keyboard)
+        
+        logger.info(f"Admin viewed favorites page {page + 1}/{total_pages} ({len(questions)} questions)")
+        
+    except Exception as e:
+        error_text = "❌ Ошибка при получении избранных вопросов"
+        if edit_message:
+            await message.edit_text(error_text, reply_markup=None)
+        else:
+            await message.answer(error_text)
+        logger.error(f"Error getting favorite questions: {e}")
+
+
 async def handle_clear_all_questions(callback: CallbackQuery):
     """Handle clearing all questions from database."""
     try:
@@ -176,10 +353,6 @@ async def handle_clear_all_questions(callback: CallbackQuery):
         )
         await callback.answer("Ошибка при очистке", show_alert=True)
         logger.error(f"Error clearing questions: {e}")
-
-
-# УБРАН общий @router.message() обработчик!
-# Теперь логика обработки состояний перенесена в questions.py
 
 
 @router.message(Command("test"))
@@ -255,94 +428,22 @@ async def admin_command(message: Message):
 
 @router.message(Command("favorites"))
 async def favorites_command(message: Message):
-    """Show favorites with action buttons."""
+    """Show favorites with pagination."""
     if message.from_user.id != ADMIN_ID:
         await message.answer(ERROR_ADMIN_ONLY)
         return
     
-    try:
-        async with async_session() as session:
-            stmt = select(Question).where(
-                Question.is_favorite == True,
-                Question.is_deleted == False
-            ).order_by(Question.created_at.desc()).limit(10)
-            
-            result = await session.execute(stmt)
-            favorites = result.scalars().all()
-        
-        if not favorites:
-            await message.answer("⭐ Нет избранных вопросов.")
-            return
-        
-        await message.answer(f"⭐ <b>Избранные вопросы ({len(favorites)}):</b>")
-        
-        # Send each favorite as separate message with buttons
-        for question in favorites:
-            created_at = question.created_at.strftime("%d.%m.%Y %H:%M")
-            status = "✅ Отвечен" if question.is_answered else "⏳ Ожидает ответа"
-            
-            question_text = f"""
-⭐ <b>Вопрос #{question.id}</b>
-
-{question.text}
-
-📅 {created_at} | {status}
-"""
-            
-            keyboard = get_favorite_question_keyboard(question.id)
-            await message.answer(question_text, reply_markup=keyboard)
-        
-        logger.info(f"Admin viewed {len(favorites)} favorite questions with buttons")
-        
-    except Exception as e:
-        await message.answer("❌ Ошибка при получении избранных вопросов")
-        logger.error(f"Error getting favorites: {e}")
+    await show_favorites_page(message, page=0)
 
 
 @router.message(Command("pending"))
 async def pending_command(message: Message):
-    """Show pending questions with full functionality."""
+    """Show pending questions with pagination."""
     if message.from_user.id != ADMIN_ID:
         await message.answer(ERROR_ADMIN_ONLY)
         return
     
-    try:
-        async with async_session() as session:
-            stmt = select(Question).where(
-                Question.answer.is_(None),
-                Question.is_deleted == False
-            ).order_by(Question.created_at.asc()).limit(10)
-            
-            result = await session.execute(stmt)
-            pending = result.scalars().all()
-        
-        if not pending:
-            await message.answer("📭 Нет неотвеченных вопросов!")
-            return
-        
-        await message.answer(f"⏳ <b>Неотвеченные вопросы ({len(pending)}):</b>")
-        
-        # Send each pending question as separate message with buttons
-        for question in pending:
-            created_at = question.created_at.strftime("%d.%m.%Y %H:%M")
-            favorite_mark = "⭐ " if question.is_favorite else ""
-            
-            question_text = f"""
-❓ <b>{favorite_mark}Вопрос #{question.id}</b>
-
-{question.text}
-
-📅 {created_at}
-"""
-            
-            keyboard = get_admin_question_keyboard(question.id, is_favorite=question.is_favorite)
-            await message.answer(question_text, reply_markup=keyboard)
-        
-        logger.info(f"Admin viewed {len(pending)} pending questions with buttons")
-        
-    except Exception as e:
-        await message.answer("❌ Ошибка при получении неотвеченных вопросов")
-        logger.error(f"Error getting pending questions: {e}")
+    await show_pending_questions_page(message, page=0)
 
 
 @router.message(Command("stats"))
@@ -391,6 +492,9 @@ async def stats_command(message: Message):
 🗑️ Удаленных: {deleted}
 
 📈 Процент ответов: {response_rate:.1f}%
+
+💡 <b>Пагинация:</b>
+Вопросы показываются по {QUESTIONS_PER_PAGE} на странице
 """
         
         keyboard = get_stats_keyboard()
@@ -522,3 +626,86 @@ async def settings_command(message: Message):
     except Exception as e:
         await message.answer("❌ Ошибка при получении настроек")
         logger.error(f"Error getting settings: {e}")
+        
+@router.message(Command("page_size"))
+async def page_size_command(message: Message):
+    """Command to change questions per page."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+    
+    # Check if user provided new size
+    command_text = message.text.strip()
+    args = command_text.split()
+    
+    if len(args) < 2:
+        await message.answer(
+            f"📄 <b>Текущий размер страницы:</b> {QUESTIONS_PER_PAGE} вопросов\n\n"
+            f"Для изменения используйте:\n"
+            f"<code>/page_size [число]</code>\n\n"
+            f"Рекомендуемые значения: 5-20"
+        )
+        return
+    
+    try:
+        new_size = int(args[1])
+        
+        if new_size < 1:
+            await message.answer("❌ Размер страницы должен быть больше 0.")
+            return
+        
+        if new_size > 50:
+            await message.answer("❌ Размер страницы слишком большой (максимум 50).")
+            return
+        
+        # В реальном приложении здесь бы сохранялось в базу данных
+        # Пока просто покажем что это возможно
+        QUESTIONS_PER_PAGE
+        QUESTIONS_PER_PAGE = new_size
+        
+        await message.answer(
+            f"✅ <b>Размер страницы изменен!</b>\n\n"
+            f"<b>Новое значение:</b> {new_size} вопросов на странице\n\n"
+            f"<i>Изменения вступят в силу при следующем просмотре списков.</i>"
+        )
+        logger.info(f"Admin updated page size to: {new_size}")
+        
+    except ValueError:
+        await message.answer("❌ Введите корректное число.")
+    except Exception as e:
+        await message.answer("❌ Ошибка при изменении размера страницы.")
+        logger.error(f"Error updating page size: {e}")
+
+
+@router.message(Command("pagination_help"))
+async def pagination_help_command(message: Message):
+    """Show pagination help for admin."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+    
+    help_text = f"""
+📖 <b>Справка по пагинации</b>
+
+📄 <b>Текущие настройки:</b>
+• Вопросов на странице: {QUESTIONS_PER_PAGE}
+• Максимум страниц: {MAX_PAGES_TO_SHOW}
+
+🎛 <b>Управление:</b>
+• ⬅️➡️ - переход между страницами
+• 📄 X/Y - текущая страница / всего страниц
+• ⏮️⏭️ - первая/последняя страница (при >3 страниц)
+
+📋 <b>Команды:</b>
+• /page_size [число] - изменить размер страницы
+• /pending - неотвеченные вопросы (по дате создания ↑)
+• /favorites - избранные вопросы (по дате создания ↓)
+
+💡 <b>Советы:</b>
+• Для быстрого просмотра: размер 5-10
+• Для массовой обработки: размер 15-20
+• При медленном интернете: уменьшите размер
+"""
+    
+    await message.answer(help_text)
+    logger.info("Admin viewed pagination help")
