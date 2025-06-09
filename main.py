@@ -282,7 +282,7 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('bot.log', encoding='utf-8')
+            logging.FileHandler('logs/bot.log', encoding='utf-8')
         ]
     )
     

@@ -29,7 +29,7 @@ def cleanup_expired_states():
     for admin_id, state in admin_answer_states.items():
         if 'created_at' in state:
             time_diff = current_time - state['created_at']
-            if time_diff > timedelta(minutes=10):
+            if time_diff > timedelta(minutes=30):
                 expired_admins.append(admin_id)
                 logger.warning(f"Cleaning up expired state for admin {admin_id}")
     
@@ -78,7 +78,7 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int):
 
 📝 <b>Напишите ваш ответ:</b>
 
-<i>⏰ Режим ответа автоматически отключится через 10 минут</i>"""
+<i>⏰ Режим ответа автоматически отключится через 30 минут</i>"""
         
         from keyboards.inline import get_cancel_answer_keyboard
         keyboard = get_cancel_answer_keyboard(question_id)
