@@ -21,7 +21,7 @@ def check_file_for_secrets(filepath: Path) -> list[str]:
         (r'password\s*=\s*["\'][\w\d]{6,}["\']', 'Hardcoded password found'),
         (r'token\s*=\s*["\'][\w\d\-:]{20,}["\']', 'Hardcoded token found'),
         (r'default\s*=\s*["\'][\w\d]{8,}["\']', 'Suspicious default value'),
-        (r'BotDB25052025', 'Example password found in code'),
+        (r'BotPassword', 'Example password found in code'),
         (r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', 'IP address found (might be okay for localhost)'),
     ]
     

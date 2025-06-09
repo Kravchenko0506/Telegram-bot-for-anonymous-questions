@@ -74,10 +74,10 @@ DB_NAME: str = get_env_var("DB_NAME")
 """PostgreSQL database name"""
 
 # Bot Settings - OPTIONAL with safe defaults
-MAX_QUESTION_LENGTH: int = get_env_int("MAX_QUESTION_LENGTH", default=1000, required=False)
+MAX_QUESTION_LENGTH: int = get_env_int("MAX_QUESTION_LENGTH", default=2500, required=False)
 """Maximum length of a question in characters"""
 
-MAX_ANSWER_LENGTH: int = get_env_int("MAX_ANSWER_LENGTH", default=2000, required=False)
+MAX_ANSWER_LENGTH: int = get_env_int("MAX_ANSWER_LENGTH", default=5000, required=False)
 """Maximum length of an answer in characters"""
 
 # Logging Configuration
@@ -104,12 +104,12 @@ DEFAULT_AUTHOR_INFO: str = "Здесь можно задать анонимны�
 
 # Message Templates
 WELCOME_MESSAGE_TEMPLATE: str = """
-👋 <b>Привет! Ты можешь анонимно задать свой вопрос автору.</b>
+👋 <b>Привет! Вы можете анонимно задать свой вопрос автору.</b>
 
 ℹ️ <b>Автор:</b> {author_name}
 📝 <b>О канале:</b> {author_info}
 
-✍️ Просто напиши свой вопрос в ответном сообщении.
+✍️ Просто напишите свой вопрос в ответном сообщении.
 
 <i>Максимальная длина вопроса: {max_length} символов</i>
 """
