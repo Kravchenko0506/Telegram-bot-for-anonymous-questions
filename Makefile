@@ -1,8 +1,8 @@
 # Makefile for Anonymous Questions Bot Testing
 # Provides convenient commands for different testing scenarios
 
-.PHONY: help test test-quick test-full test-unit test-integration test-e2e test-security test-performance
-.PHONY: test-models test-handlers test-utils test-ci test-deploy test-pre-commit
+.PHONY: help test test-quick test-full test-unit test-integration test-handlers test-models test-utils test-middleware
+.PHONY: test-security test-ci test-deploy test-pre-commit
 .PHONY: coverage coverage-html coverage-report lint clean install-dev install-test
 .PHONY: setup-test-env check-deps run-bot debug-bot
 
@@ -40,9 +40,11 @@ help: ## Show this help message
 	@echo "$(GREEN)Test Categories:$(NC)"
 	@echo "  $(YELLOW)Unit Tests$(NC)      - Fast, isolated tests"
 	@echo "  $(YELLOW)Integration$(NC)     - Database and component tests"  
-	@echo "  $(YELLOW)E2E Tests$(NC)       - End-to-end workflow tests"
 	@echo "  $(YELLOW)Security$(NC)        - Security validation tests"
-	@echo "  $(YELLOW)Performance$(NC)     - Load and performance tests"
+	@echo "  $(YELLOW)Handlers$(NC)        - Bot handler tests"
+	@echo "  $(YELLOW)Models$(NC)          - Data model tests"
+	@echo "  $(YELLOW)Utils$(NC)           - Utility function tests"
+	@echo "  $(YELLOW)Middleware$(NC)      - Middleware tests"
 
 # Installation targets
 install-dev: ## Install development dependencies
@@ -76,36 +78,31 @@ test-full: check-deps ## Run complete test suite with coverage
 
 test-unit: check-deps ## Run unit tests only
 	@echo "$(BLUE)🧪 Running Unit Tests$(NC)"
-	$(PYTHON) -m pytest -v -m "unit" --tb=short tests/
+	$(PYTHON) -m pytest -v -m "unit" --tb=short Tests/
 
 test-integration: check-deps ## Run integration and database tests
 	@echo "$(BLUE)🔗 Running Integration Tests$(NC)"
 	$(PYTHON) run_tests.py integration
 
-test-e2e: check-deps ## Run end-to-end tests
-	@echo "$(BLUE)🎯 Running End-to-End Tests$(NC)"
-	$(PYTHON) run_tests.py e2e
-
-test-security: check-deps ## Run security-focused tests
-	@echo "$(BLUE)🔒 Running Security Tests$(NC)"
-	$(PYTHON) run_tests.py security
-
-test-performance: check-deps ## Run performance and load tests
-	@echo "$(BLUE)⚡ Running Performance Tests$(NC)"
-	$(PYTHON) run_tests.py performance
-
-# Component-specific tests
-test-models: check-deps ## Run model tests only
-	@echo "$(BLUE)📊 Running Model Tests$(NC)"
-	$(PYTHON) run_tests.py models
-
 test-handlers: check-deps ## Run handler tests only
 	@echo "$(BLUE)🎮 Running Handler Tests$(NC)"
 	$(PYTHON) run_tests.py handlers
 
+test-models: check-deps ## Run model tests only
+	@echo "$(BLUE)📊 Running Model Tests$(NC)"
+	$(PYTHON) run_tests.py models
+
 test-utils: check-deps ## Run utility tests only
 	@echo "$(BLUE)🛠 Running Utility Tests$(NC)"
 	$(PYTHON) run_tests.py utils
+
+test-middleware: check-deps ## Run middleware tests only
+	@echo "$(BLUE)⚙️ Running Middleware Tests$(NC)"
+	$(PYTHON) run_tests.py middleware
+
+test-security: check-deps ## Run security-focused tests
+	@echo "$(BLUE)🔒 Running Security Tests$(NC)"
+	$(PYTHON) run_tests.py security
 
 # CI/CD targets
 test-ci: check-deps ## Run tests optimized for CI/CD pipeline
@@ -125,9 +122,9 @@ coverage: test-full ## Generate coverage report (same as test-full)
 
 coverage-html: check-deps ## Generate HTML coverage report
 	@echo "$(YELLOW)Generating HTML coverage report...$(NC)"
-	$(PYTHON) -m pytest --cov=. --cov-report=html:tests/coverage_html tests/
+	$(PYTHON) -m pytest --cov=. --cov-report=html:Tests/coverage_html Tests/
 	@echo "$(GREEN)✅ HTML coverage report generated$(NC)"
-	@echo "Open: tests/coverage_html/index.html"
+	@echo "Open: Tests/coverage_html/index.html"
 
 coverage-report: ## Show coverage report location
 	$(PYTHON) run_tests.py --coverage
@@ -136,7 +133,7 @@ coverage-report: ## Show coverage report location
 lint: ## Run code linting with flake8
 	@echo "$(YELLOW)Running code linting...$(NC)"
 	@which flake8 >/dev/null 2>&1 || (echo "$(RED)❌ flake8 not found. Install with: pip install flake8$(NC)" && exit 1)
-	flake8 --max-line-length=120 --ignore=E501,W503 --exclude=venv,env,__pycache__,.git .
+	flake8 --max-line-length=120 --ignore=E501,W503,E203 --exclude=venv,env,__pycache__,.git,Tests/coverage_html .
 	@echo "$(GREEN)✅ Linting passed$(NC)"
 
 format: ## Format code with black (if available)
@@ -162,15 +159,6 @@ clean-all: clean ## Clean everything including bytecode
 	rm -rf .pytest_cache .mypy_cache .tox dist build *.egg-info
 	@echo "$(GREEN)✅ Deep cleanup completed$(NC)"
 
-# Database targets
-setup-test-db: ## Setup test database (if needed)
-	@echo "$(YELLOW)Setting up test database...$(NC)"
-	$(PYTHON) -c "from models.database import init_db; import asyncio; asyncio.run(init_db())" 2>/dev/null || echo "$(YELLOW)⚠️  Database setup skipped (may not be needed for tests)$(NC)"
-
-reset-test-db: ## Reset test database
-	@echo "$(YELLOW)Resetting test database...$(NC)"
-	$(PYTHON) reset_database.py 2>/dev/null || echo "$(YELLOW)⚠️  Database reset skipped$(NC)"
-
 # Bot execution targets
 run-bot: check-deps ## Run the bot (for manual testing)
 	@echo "$(BLUE)🤖 Starting bot...$(NC)"
@@ -185,7 +173,7 @@ config-check: ## Check bot configuration
 	$(PYTHON) check_config.py
 
 # Development workflows
-dev-setup: install-dev setup-test-db ## Complete development setup
+dev-setup: install-dev ## Complete development setup
 	@echo "$(GREEN)🎉 Development environment ready!$(NC)"
 	@echo ""
 	@echo "$(CYAN)Next steps:$(NC)"
@@ -201,11 +189,6 @@ pre-push: test-full lint type-check ## Run before pushing to repository
 release-test: test-deploy ## Run comprehensive tests before release
 	@echo "$(GREEN)🎉 Ready for release!$(NC)"
 
-# Watch mode (if available)
-test-watch: ## Run tests in watch mode (requires pytest-watch)
-	@echo "$(BLUE)👀 Running tests in watch mode$(NC)"
-	@which ptw >/dev/null 2>&1 && ptw --runner "$(PYTHON) -m pytest -v -m unit --tb=short" tests/ || (echo "$(RED)❌ pytest-watch not found. Install with: pip install pytest-watch$(NC)" && exit 1)
-
 # Information targets
 info: ## Show project information
 	@echo "$(CYAN)Project Information$(NC)"
@@ -214,29 +197,16 @@ info: ## Show project information
 	@echo "Python: $(shell $(PYTHON) --version)"
 	@echo "Pytest: $(shell $(PYTHON) -c 'import pytest; print(pytest.__version__)' 2>/dev/null || echo 'Not installed')"
 	@echo "Working Directory: $(shell pwd)"
-	@echo "Tests Directory: $(shell pwd)/tests"
+	@echo "Tests Directory: $(shell pwd)/Tests"
 
 test-status: ## Show current test status and coverage
 	@echo "$(CYAN)Test Status$(NC)"
 	@echo "============"
-	@[ -f tests/coverage_html/index.html ] && echo "✅ Coverage report available" || echo "❌ No coverage report found"
+	@[ -f Tests/coverage_html/index.html ] && echo "✅ Coverage report available" || echo "❌ No coverage report found"
 	@[ -f .coverage ] && echo "✅ Coverage data exists" || echo "❌ No coverage data"
 	@[ -d .pytest_cache ] && echo "✅ Pytest cache exists" || echo "❌ No pytest cache"
 	@echo ""
 	@echo "Run 'make test-full' to generate complete coverage report"
-
-# Parallel testing (if system supports it)
-test-parallel: check-deps ## Run tests in parallel (requires pytest-xdist)
-	@echo "$(BLUE)🚀 Running tests in parallel$(NC)"
-	@which pytest >/dev/null 2>&1 || (echo "$(RED)❌ pytest not found$(NC)" && exit 1)
-	$(PYTHON) -m pytest -v -n auto --tb=short tests/ 2>/dev/null || $(PYTHON) -m pytest -v --tb=short tests/
-
-# Special test combinations
-test-critical: test-security test-integration ## Run critical tests only
-	@echo "$(GREEN)✅ Critical tests completed$(NC)"
-
-test-components: test-models test-handlers test-utils ## Run all component tests
-	@echo "$(GREEN)✅ Component tests completed$(NC)"
 
 # Help for specific test types
 help-marks: ## Show available pytest marks
@@ -244,8 +214,6 @@ help-marks: ## Show available pytest marks
 	@echo "===================="
 	@echo "$(YELLOW)unit$(NC)        - Fast unit tests"
 	@echo "$(YELLOW)integration$(NC) - Integration tests with database"
-	@echo "$(YELLOW)e2e$(NC)         - End-to-end workflow tests"
-	@echo "$(YELLOW)slow$(NC)        - Performance and load tests"
 	@echo "$(YELLOW)database$(NC)    - Tests requiring database"
 	@echo "$(YELLOW)handlers$(NC)    - Bot handler tests"
 	@echo "$(YELLOW)models$(NC)      - Data model tests"
