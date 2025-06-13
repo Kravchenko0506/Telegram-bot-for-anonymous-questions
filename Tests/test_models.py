@@ -3,6 +3,7 @@ Tests essential CRUD operations and data integrity for all models.
 """
 
 import pytest
+import pytest_asyncio
 from datetime import datetime
 from sqlalchemy import select, func
 
@@ -49,6 +50,7 @@ class TestCriticalQuestionModel:
         question.is_deleted = True
         assert question.is_pending is False
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_question_crud_operations(self, clean_db):
@@ -128,6 +130,7 @@ class TestCriticalQuestionModel:
 class TestCriticalSettings:
     """Critical tests for bot settings - essential for configuration."""
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_settings_basic_operations(self, clean_db):
@@ -150,6 +153,7 @@ class TestCriticalSettings:
         updated = await clean_db.get(BotSettings, "test_key")
         assert updated.value == "updated_value"
     
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.models
     async def test_settings_manager_core_functions(self, clean_db):
@@ -174,6 +178,7 @@ class TestCriticalSettings:
             success = await SettingsManager.set_author_name('New Test Author')
             assert success is True
     
+    @pytest.mark.asyncio
     @pytest.mark.models
     @pytest.mark.unit
     async def test_settings_manager_defaults(self):
@@ -196,6 +201,7 @@ class TestCriticalSettings:
 class TestCriticalUserStates:
     """Critical tests for user state management - essential for bot flow."""
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_user_state_crud(self, clean_db):
@@ -223,6 +229,7 @@ class TestCriticalUserStates:
         updated = await clean_db.get(UserState, 123456789)
         assert updated.state == "updated_state"
     
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.models
     async def test_user_state_manager_core(self, clean_db):
@@ -250,6 +257,7 @@ class TestCriticalUserStates:
             can_send = await UserStateManager.can_send_question(user_id)
             assert isinstance(can_send, bool)
     
+    @pytest.mark.asyncio
     @pytest.mark.models
     @pytest.mark.unit
     async def test_user_state_constants(self):
@@ -268,6 +276,7 @@ class TestCriticalUserStates:
 class TestCriticalDataIntegrity:
     """Tests for data integrity and consistency."""
     
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.models
     async def test_question_user_relationship(self, clean_db):
@@ -301,6 +310,7 @@ class TestCriticalDataIntegrity:
         assert question.user_id == user_state.user_id
         assert question.is_pending is True
     
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.models
     async def test_question_workflow_states(self, clean_db):
@@ -335,6 +345,7 @@ class TestCriticalDataIntegrity:
         assert question.is_deleted is True
         assert question.is_pending is False
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_database_constraints(self, clean_db):
@@ -365,6 +376,7 @@ class TestCriticalDataIntegrity:
 class TestCriticalQueries:
     """Test critical database queries used by the bot."""
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_pending_questions_query(self, clean_db):
@@ -395,6 +407,7 @@ class TestCriticalQueries:
         for q in pending:
             assert q.is_pending is True
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_stats_queries(self, clean_db):
@@ -502,6 +515,7 @@ class TestModelValidation:
 class TestAdminStateModel:
     """Tests for AdminState model functionality."""
     
+    @pytest.mark.asyncio
     @pytest.mark.database
     @pytest.mark.models
     async def test_admin_state_crud(self, clean_db):
@@ -539,6 +553,7 @@ class TestAdminStateModel:
         deleted = await clean_db.get(AdminState, 123456789)
         assert deleted is None
     
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.models
     async def test_admin_state_manager(self, clean_db):

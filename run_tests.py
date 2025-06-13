@@ -19,7 +19,7 @@ class TestRunner:
     
     def __init__(self):
         self.project_root = Path(__file__).parent
-        self.tests_dir = self.project_root / "Tests"  # Fixed: capital T
+        self.tests_dir = self.project_root / "Tests"
         self.coverage_dir = self.project_root / "Tests" / "coverage_html"
         
     def run_command(self, cmd: List[str], description: str = None) -> int:
@@ -49,6 +49,7 @@ class TestRunner:
             "-m", "unit",
             "--tb=short",
             "--durations=10",
+            "--asyncio-mode=auto",
             str(self.tests_dir)
         ]
         return self.run_command(cmd, "Running Quick Unit Tests")
@@ -62,9 +63,10 @@ class TestRunner:
             f"--cov-report=html:{self.coverage_dir}",
             "--cov-report=term-missing",
             "--cov-report=xml",
-            "--cov-fail-under=70",  # Reduced from 75 to be more realistic
+            "--cov-fail-under=70",
             "--tb=short",
             "--durations=10",
+            "--asyncio-mode=auto",
             str(self.tests_dir)
         ]
         return self.run_command(cmd, "Running Full Test Suite with Coverage")
@@ -76,6 +78,7 @@ class TestRunner:
             "-v",
             "-m", "integration or database",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir)
         ]
         return self.run_command(cmd, "Running Integration and Database Tests")
@@ -87,6 +90,7 @@ class TestRunner:
             "-v",
             "-m", "handlers",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir / "test_handlers.py")
         ]
         return self.run_command(cmd, "Running Handler Tests")
@@ -98,6 +102,7 @@ class TestRunner:
             "-v",
             "-m", "models",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir / "test_models.py")
         ]
         return self.run_command(cmd, "Running Model Tests")
@@ -109,6 +114,7 @@ class TestRunner:
             "-v",
             "-m", "utils",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir / "test_utils.py")
         ]
         return self.run_command(cmd, "Running Utility Tests")
@@ -119,6 +125,7 @@ class TestRunner:
             "python", "-m", "pytest",
             "-v",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir / "middleware.py")
         ]
         return self.run_command(cmd, "Running Middleware Tests")
@@ -130,6 +137,7 @@ class TestRunner:
             "-v",
             "-m", "security",
             "--tb=short",
+            "--asyncio-mode=auto",
             str(self.tests_dir)
         ]
         return self.run_command(cmd, "Running Security Tests")
@@ -142,9 +150,10 @@ class TestRunner:
             "--tb=short",
             "--cov=.",
             "--cov-report=xml",
-            "--cov-fail-under=60",  # Lower threshold for CI
+            "--cov-fail-under=60",
             "--maxfail=5",
-            "-x",  # Stop on first failure
+            "-x",
+            "--asyncio-mode=auto",
             str(self.tests_dir)
         ]
         return self.run_command(cmd, "Running CI/CD Tests")

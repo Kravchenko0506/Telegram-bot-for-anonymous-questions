@@ -15,7 +15,7 @@ import os
 import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 from sqlalchemy import text
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Database configuration from environment
 DB_USER = os.getenv("DB_USER", "botanon")
-DB_PASSWORD = os.getenv("DB_PASSWORD") 
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "dbfrombot")
@@ -52,20 +52,20 @@ async_session = async_sessionmaker(
     expire_on_commit=False
 )
 
-# Base class for all ORM models
+# Create declarative base
 Base = declarative_base()
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency function for getting database sessions.
-    
+
     Provides proper session management with automatic cleanup.
     Use this in handlers and services for database operations.
-    
+
     Yields:
         AsyncSession: Database session for operations
-        
+
     Example:
         async with get_async_session() as session:
             result = await session.execute(select(Question))
@@ -84,10 +84,10 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """
     Initialize database tables.
-    
+
     Creates all tables defined in models if they don't exist.
     This function is idempotent - safe to call multiple times.
-    
+
     Raises:
         Exception: If database initialization fails
     """
@@ -97,15 +97,16 @@ async def init_db() -> None:
             from models.questions import Question
             from models.settings import BotSettings
             from models.user_states import UserState  # Import user states model
-            
+
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)
-            
+
         # Initialize default settings if they don't exist
         await _initialize_default_settings()
-            
-        logger.info("Database initialized successfully (Questions + Settings tables)")
-        
+
+        logger.info(
+            "Database initialized successfully (Questions + Settings tables)")
+
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
@@ -114,7 +115,7 @@ async def init_db() -> None:
 async def close_db() -> None:
     """
     Close database engine and cleanup connections.
-    
+
     Call this function when shutting down the application
     to ensure proper cleanup of database resources.
     """
@@ -144,17 +145,17 @@ async def _initialize_default_settings() -> None:
     """Initialize default settings in database if they don't exist."""
     try:
         from models.settings import BotSettings, SettingsManager
-        
+
         async with async_session() as session:
             # Check if author_name exists
             author_setting = await session.get(BotSettings, 'author_name')
             if not author_setting:
                 author_setting = BotSettings(
-                    key='author_name', 
+                    key='author_name',
                     value=SettingsManager.DEFAULT_SETTINGS['author_name']
                 )
                 session.add(author_setting)
-            
+
             # Check if author_info exists
             info_setting = await session.get(BotSettings, 'author_info')
             if not info_setting:
@@ -163,9 +164,9 @@ async def _initialize_default_settings() -> None:
                     value=SettingsManager.DEFAULT_SETTINGS['author_info']
                 )
                 session.add(info_setting)
-            
+
             await session.commit()
             logger.info("Default settings initialized")
-            
+
     except Exception as e:
         logger.error(f"Failed to initialize default settings: {e}")
