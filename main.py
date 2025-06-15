@@ -1,7 +1,26 @@
 """
-Telegram Bot for Anonymous Questions - Production Ready Version
+Anonymous Questions Telegram Bot
 
-Enhanced with security, rate limiting, and error handling.
+A production-ready Telegram bot that enables anonymous question submission with 
+comprehensive admin management and security features.
+
+Core Features:
+- Anonymous question submission and management
+- Admin interface with extensive controls
+- Rate limiting and spam protection
+- Error tracking and logging (Sentry integration)
+- Database persistence (PostgreSQL)
+- Periodic maintenance tasks
+- Comprehensive security measures
+
+Technical Features:
+- Asynchronous architecture
+- Middleware-based request processing
+- Structured error handling
+- Database connection pooling
+- Resource cleanup on shutdown
+- Admin notifications
+- Command menu management
 """
 
 import asyncio
@@ -25,7 +44,7 @@ if SENTRY_DSN:
         import sentry_sdk
         from sentry_sdk.integrations.asyncio import AsyncioIntegration
         from sentry_sdk.integrations.logging import LoggingIntegration
-        
+
         sentry_sdk.init(
             dsn=SENTRY_DSN,
             integrations=[
@@ -48,10 +67,21 @@ else:
 
 
 async def setup_bot() -> tuple[Bot, Dispatcher]:
-    """Initialize bot and dispatcher with proper configuration."""
+    """
+    Initialize and configure bot and dispatcher instances.
+
+    This function:
+    - Validates all configuration parameters
+    - Creates bot instance with HTML parsing
+    - Sets up dispatcher with middleware stack
+    - Configures error handling and rate limiting
+
+    Returns:
+        tuple[Bot, Dispatcher]: Configured bot and dispatcher instances
+    """
     # Validate configuration
     validate_config()
-    
+
     # Create bot instance with default properties
     bot = Bot(
         token=TOKEN,
@@ -59,90 +89,128 @@ async def setup_bot() -> tuple[Bot, Dispatcher]:
             parse_mode=ParseMode.HTML
         )
     )
-    
+
     # Create dispatcher
     dp = Dispatcher()
-    
+
     # Add middleware in correct order
     # 1. Error handler (outermost - catches all errors)
     dp.message.middleware(ErrorHandlerMiddleware(notify_admin=True))
     dp.callback_query.middleware(ErrorHandlerMiddleware(notify_admin=True))
-    
+
     # 2. Rate limiting
     dp.message.middleware(RateLimitMiddleware())
     dp.callback_query.middleware(CallbackRateLimitMiddleware())
-    
+
     return bot, dp
 
 
 async def setup_bot_menu(bot: Bot) -> None:
-    """Setup simplified bot menu - only /start command."""
+    """
+    Configure bot command menu for regular users and admin.
+
+    Sets up two different command sets:
+    - Regular users: Basic commands (/start)
+    - Admin: Extended command set for bot management
+
+    The admin commands include:
+    - Channel management (/set_author, /set_info)
+    - Bot settings (/settings)
+    - Statistics (/stats)
+    - Question management (/pending, /favorites)
+
+    Args:
+        bot: Bot instance to configure commands for
+    """
     try:
         # Only /start command for all users
         user_commands = [
             BotCommand(command="start", description="🚀 Начать работу с ботом"),
         ]
-        
+
         # Admin gets additional editing commands
         admin_commands = [
             BotCommand(command="start", description="🚀 Админ-панель"),
-            BotCommand(command="set_author", description="✏️ Изменить имя автора"),
-            BotCommand(command="set_info", description="📝 Изменить описание канала"),
+            BotCommand(command="set_author",
+                       description="✏️ Изменить имя автора"),
+            BotCommand(command="set_info",
+                       description="📝 Изменить описание канала"),
             BotCommand(command="settings", description="⚙️ Текущие настройки"),
             BotCommand(command="stats", description="📊 Статистика"),
-            BotCommand(command="pending", description="⏳ Неотвеченные вопросы"),
+            BotCommand(command="pending",
+                       description="⏳ Неотвеченные вопросы"),
             BotCommand(command="favorites", description="⭐ Избранные"),
         ]
-        
+
         # Set commands for all users (only /start)
         await bot.set_my_commands(user_commands, BotCommandScopeDefault())
-        
+
         # Set admin-specific commands
         await bot.set_my_commands(
-            admin_commands, 
+            admin_commands,
             BotCommandScopeChat(chat_id=ADMIN_ID)
         )
-        
+
         logger.info("Bot menu configured successfully")
-        
+
     except Exception as e:
         logger.error(f"Failed to setup bot menu: {e}")
 
 
 async def register_handlers(dp: Dispatcher) -> None:
     """
-    Register all message and callback handlers.
-    
-    Handler registration order is important:
-    1. Admin states (highest priority - interactive mode)
-    2. Admin handlers (callbacks and commands)
-    3. Start/help commands  
-    4. Question handlers (catch-all, must be last)
+    Register all message and callback handlers in the correct order.
+
+    Handler Registration Priority:
+    1. Admin states - Highest priority, handles interactive admin mode
+    2. Admin handlers - Processes admin callbacks and commands
+    3. Start/help commands - Basic user interaction
+    4. Question handlers - Catch-all for user questions (lowest priority)
+
+    The order is critical for proper message routing.
+
+    Args:
+        dp: Dispatcher instance to register handlers with
     """
     # Register handlers in order of specificity
     dp.include_router(admin_states.router)  # Admin interactive states
     dp.include_router(admin.router)         # Admin callbacks and commands
     dp.include_router(start.router)         # Start and help commands
-    dp.include_router(questions.router)     # Question processing (catch-all, LAST)
-    
+    # Question processing (catch-all, LAST)
+    dp.include_router(questions.router)
+
     logger.info("All handlers registered successfully")
 
 
 async def on_startup(bot: Bot) -> None:
-    """Actions to perform on bot startup."""
+    """
+    Perform necessary startup tasks when the bot begins operation.
+
+    Tasks performed:
+    1. Database connection verification
+    2. Start periodic maintenance tasks
+    3. Retrieve and log bot information
+    4. Send startup notification to admin
+
+    Args:
+        bot: Bot instance to use for startup tasks
+
+    Raises:
+        Exception: If database connection fails
+    """
     logger.info("Running startup tasks...")
-    
+
     # Verify database connection
     if not await check_db_connection():
         raise Exception("Database connection failed")
-    
+
     # Start periodic tasks
     await start_periodic_tasks()
-    
+
     # Get bot info
     bot_info = await bot.get_me()
     logger.info(f"Bot started: @{bot_info.username}")
-    
+
     # Notify admin
     try:
         await bot.send_message(
@@ -155,112 +223,83 @@ async def on_startup(bot: Bot) -> None:
         logger.error(f"Failed to notify admin on startup: {e}")
 
 
-async def main() -> None:
-    """
-    Main application entry point.
-    """
-    try:
-        logger.info("Starting Anonymous Questions Bot (Production Mode)...")
-        
-        # Initialize database
-        logger.info("Initializing PostgreSQL database...")
-        await init_db()
-        
-        # Setup bot and dispatcher
-        bot, dp = await setup_bot()
-        
-        # Setup bot menu
-        await setup_bot_menu(bot)
-        
-        # Register handlers
-        await register_handlers(dp)
-        
-        
-        dp.startup.register(lambda: on_startup(bot))  
-        dp.shutdown.register(lambda: on_shutdown(bot))
-        
-        # Start bot polling
-        logger.info("Bot is starting polling...")
-        
-        await dp.start_polling(bot)
-        
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user (Ctrl+C)")
-        
-    except Exception as e:
-        logger.error(f"Critical error: {e}")
-        raise
-        
-    finally:
-        # Cleanup resources
-        try:
-            await close_db()
-            logger.info("Database connections closed")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
-
-
 async def on_shutdown(bot: Bot) -> None:
-    """Actions to perform on bot shutdown."""
+    """
+    Perform cleanup tasks when the bot is shutting down.
+
+    Tasks performed:
+    1. Stop periodic maintenance tasks
+    2. Send shutdown notification to admin
+    3. Close bot session
+
+    Args:
+        bot: Bot instance to perform shutdown tasks with
+    """
     logger.info("Running shutdown tasks...")
-    
+
     # Stop periodic tasks
     await stop_periodic_tasks()
-    
+
     # Notify admin
     try:
         await bot.send_message(ADMIN_ID, "⚠️ Бот остановлен")
     except Exception:
         pass  # Ignore errors on shutdown
-    
+
     # Close bot session
     await bot.session.close()
 
 
 async def main() -> None:
     """
-    Main application entry point.
-    
-    Process:
-    1. Setup logging
-    2. Initialize database
-    3. Create bot and dispatcher
-    4. Setup bot menu
-    5. Register handlers
-    6. Start polling with startup/shutdown hooks
+    Main application entry point and lifecycle manager.
+
+    Responsibilities:
+    1. Database initialization
+    2. Bot and dispatcher setup
+    3. Command menu configuration
+    4. Handler registration
+    5. Startup/shutdown handler registration
+    6. Bot polling management
+    7. Resource cleanup
+
+    Error Handling:
+    - Graceful handling of keyboard interrupts
+    - Critical error logging
+    - Resource cleanup in all cases
     """
     try:
         logger.info("Starting Anonymous Questions Bot (Production Mode)...")
-        
+
         # Initialize database
         logger.info("Initializing PostgreSQL database...")
         await init_db()
-        
+
         # Setup bot and dispatcher
         bot, dp = await setup_bot()
-        
+
         # Setup bot menu
         await setup_bot_menu(bot)
-        
+
         # Register handlers
         await register_handlers(dp)
-        
+
         # Set startup and shutdown hooks
-        dp.startup.register( on_startup)
+        dp.startup.register(on_startup)
         dp.shutdown.register(on_shutdown)
-        
+
         # Start bot polling
         logger.info("Bot is starting polling...")
-        
+
         await dp.start_polling(bot)
-        
+
     except KeyboardInterrupt:
         logger.info("Bot stopped by user (Ctrl+C)")
-        
+
     except Exception as e:
         logger.error(f"Critical error: {e}")
         raise
-        
+
     finally:
         # Cleanup resources
         try:
@@ -273,7 +312,7 @@ async def main() -> None:
 if __name__ == "__main__":
     """
     Application entry point.
-    
+
     Sets up proper logging and runs the main coroutine.
     """
     # Setup logging
@@ -285,15 +324,15 @@ if __name__ == "__main__":
             logging.FileHandler('logs/bot.log', encoding='utf-8')
         ]
     )
-    
+
     # Suppress noisy loggers
     logging.getLogger('aiogram').setLevel(logging.WARNING)
     logging.getLogger('asyncio').setLevel(logging.WARNING)
-    
+
     print("🚀 Starting bot...")
     print("📁 Logs: console + bot.log file")
     print("🔒 Security features enabled")
-    
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

@@ -1,7 +1,25 @@
 """
-Question Model for Anonymous Questions Bot
+Question Management System
 
-Final unified model for PostgreSQL with asyncpg.
+A comprehensive system for managing anonymous questions in the bot's database.
+This module provides the data model and business logic for question handling.
+
+Features:
+- Anonymous question storage
+- Answer management
+- Question tracking
+- Soft deletion
+- Favorite marking
+- Timestamp tracking
+- User analytics
+
+Technical Features:
+- PostgreSQL integration
+- SQLAlchemy ORM mapping
+- Index optimization
+- Timezone support
+- JSON serialization
+- Factory methods
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, BigInteger
@@ -14,66 +32,127 @@ from models.database import Base
 
 class Question(Base):
     """
-    Model for storing anonymous questions and their metadata.
-    
-    Complete workflow support:
-    1. User sends question via unique link
-    2. Admin receives notification with action buttons
-    3. Admin can answer, favorite, or delete
-    4. User receives answer if provided
+    Comprehensive data model for anonymous questions and their lifecycle.
+
+    This model handles:
+    - Question submission and storage
+    - Answer management
+    - Question status tracking
+    - Admin operations
+    - Analytics data
+
+    Features:
+    - Anonymous question storage
+    - Answer tracking
+    - Favorite marking
+    - Soft deletion
+    - Timestamp management
+    - User analytics
+    - Source tracking
+
+    Workflow:
+    1. User submits question anonymously
+    2. Admin receives notification
+    3. Admin can perform actions:
+       - Answer the question
+       - Mark as favorite
+       - Delete the question
+    4. User receives notification of answer
+
+    Technical Features:
+    - Optimized database indexes
+    - Timezone-aware timestamps
+    - Automatic update tracking
+    - JSON serialization
+    - Text preview generation
     """
-    
+
     __tablename__ = "questions"
 
     # Primary identification
     id = Column(Integer, primary_key=True, autoincrement=True)
-    
+
     # User tracking (anonymous to admin, but tracked for analytics)
     user_id = Column(BigInteger, nullable=True, index=True)
-    """Telegram user ID - allows tracking but maintains anonymity"""
-    
+    """
+    Telegram user ID for analytics and rate limiting.
+    Anonymous to admin but allows tracking user behavior.
+    """
+
     unique_id = Column(String(255), nullable=True, index=True)
-    """Unique identifier from start parameter for tracking question sources"""
-    
+    """
+    Unique tracking identifier from deep links.
+    Used for analyzing question sources and campaign effectiveness.
+    """
+
     # Question content
     text = Column(Text, nullable=False)
-    """The actual question text from user"""
-    
+    """
+    The question text submitted by the user.
+    No length limit at database level (handled by application).
+    """
+
     answer = Column(Text, nullable=True)
-    """Admin's answer - NULL until admin responds"""
-    
+    """
+    Admin's response to the question.
+    Null indicates pending questions.
+    """
+
     # Admin management flags
     is_favorite = Column(Boolean, default=False, nullable=False, index=True)
-    """Admin can mark questions as favorites for easy access"""
-    
+    """
+    Favorite flag for admin organization.
+    Indexed for quick access to favorite questions.
+    """
+
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
-    """Soft delete flag - allows recovery if needed"""
-    
+    """
+    Soft deletion flag for data preservation.
+    Allows question recovery if needed.
+    """
+
     # Timestamps
     created_at = Column(
-        DateTime(timezone=True), 
-        server_default=func.now(), 
+        DateTime(timezone=True),
+        server_default=func.now(),
         nullable=False,
         index=True
     )
-    """When the question was first submitted"""
-    
+    """
+    Question submission timestamp.
+    Timezone-aware and indexed for chronological access.
+    """
+
     answered_at = Column(DateTime(timezone=True), nullable=True)
-    """When admin provided an answer - NULL if not answered"""
-    
+    """
+    Answer timestamp.
+    Null for pending questions, set when admin responds.
+    """
+
     updated_at = Column(
-        DateTime(timezone=True), 
+        DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
     )
-    """Last time any field was modified"""
-    
+    """
+    Last modification timestamp.
+    Automatically updated on any change.
+    """
+
     deleted_at = Column(DateTime(timezone=True), nullable=True)
-    """When question was soft deleted - NULL if not deleted"""
+    """
+    Soft deletion timestamp.
+    Null if question is active, set on deletion.
+    """
 
     def __repr__(self) -> str:
-        """String representation for debugging and logging."""
+        """
+        Generate string representation for debugging.
+
+        Returns:
+            str: Formatted string with key question attributes
+        """
         return (
             f"<Question(id={self.id}, "
             f"user_id={self.user_id}, "
@@ -83,26 +162,52 @@ class Question(Base):
             f"favorite={self.is_favorite}, "
             f"deleted={self.is_deleted})>"
         )
-    
+
     @property
     def is_answered(self) -> bool:
-        """Check if question has been answered by admin."""
+        """
+        Check if question has been answered.
+
+        Returns:
+            bool: True if question has non-empty answer
+        """
         return self.answer is not None and self.answer.strip() != ""
-    
+
     @property
     def is_pending(self) -> bool:
-        """Check if question is waiting for admin response."""
+        """
+        Check if question needs admin attention.
+
+        Returns:
+            bool: True if question is active and unanswered
+        """
         return not self.is_answered and not self.is_deleted
-    
+
     @property
     def preview_text(self) -> str:
-        """Get shortened text for admin previews."""
+        """
+        Generate shortened question preview.
+
+        Returns:
+            str: Full text if under 100 chars, or truncated with ellipsis
+        """
         if len(self.text) <= 100:
             return self.text
         return self.text[:97] + "..."
-    
+
     def to_dict(self) -> dict:
-        """Convert model instance to dictionary."""
+        """
+        Convert question to dictionary format.
+
+        Includes:
+        - All model attributes
+        - Computed properties
+        - ISO formatted timestamps
+        - Preview text
+
+        Returns:
+            dict: Question data in dictionary format
+        """
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -118,15 +223,31 @@ class Question(Base):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'preview_text': self.preview_text
         }
-    
+
     @classmethod
     def create_new(
-        cls, 
-        text: str, 
-        user_id: Optional[int] = None, 
+        cls,
+        text: str,
+        user_id: Optional[int] = None,
         unique_id: Optional[str] = None
     ) -> 'Question':
-        """Factory method for creating new questions."""
+        """
+        Factory method for creating new questions.
+
+        Features:
+        - Text whitespace normalization
+        - Optional user tracking
+        - Optional source tracking
+        - Default flag initialization
+
+        Args:
+            text: Question text from user
+            user_id: Optional Telegram user ID
+            unique_id: Optional tracking identifier
+
+        Returns:
+            Question: New question instance
+        """
         return cls(
             text=text.strip(),
             user_id=user_id,

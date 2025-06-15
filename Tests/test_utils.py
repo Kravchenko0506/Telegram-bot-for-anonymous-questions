@@ -1,6 +1,10 @@
 """
-Tests essential utility functions that ensure bot security and data integrity.
-Uses only existing modules from the project.
+Tests for utility functions and validation components.
+This module verifies the functionality of core utility components including:
+- Configuration validation
+- Input sanitization
+- Security checks
+- Content moderation
 """
 
 import pytest
@@ -10,12 +14,24 @@ import os
 
 
 class TestCriticalConfigValidation:
-    """Test critical configuration validation - ensures proper setup."""
+    """Tests for configuration validation ensuring proper system setup.
+
+    Verifies:
+    - Required configuration constants exist
+    - Configuration values are within valid ranges
+    - Environment variables are properly loaded
+    """
 
     @pytest.mark.unit
     @pytest.mark.utils
     def test_config_constants_exist(self):
-        """Test that critical config constants are properly defined."""
+        """Verify that all required configuration constants are properly defined.
+
+        Checks:
+        - Constants exist and are not None
+        - Values are of correct type
+        - Values are within valid ranges
+        """
         # Get values from environment for testing
         max_length = int(os.getenv('MAX_QUESTION_LENGTH', '2500'))
         admin_id = int(os.getenv('ADMIN_ID', '123456789'))
@@ -111,7 +127,14 @@ class TestCriticalInputValidation:
     @pytest.mark.unit
     @pytest.mark.utils
     def test_input_validator_validate_question(self):
-        """Test question validation."""
+        """Test question validation logic and error messages.
+
+        Verifies:
+        - Valid questions are accepted
+        - Invalid questions are rejected with appropriate error messages
+        - Length constraints are enforced
+        - Empty or malformed input is properly handled
+        """
         from utils.validators import InputValidator
 
         # Valid question
@@ -123,19 +146,19 @@ class TestCriticalInputValidation:
         # Too short question
         is_valid, error = InputValidator.validate_question("Hi")
         assert is_valid is False
-        assert "короткий" in error.lower() or "short" in error.lower()
+        assert "короткий" in error.lower()
 
         # Empty question
         is_valid, error = InputValidator.validate_question("")
         assert is_valid is False
-        assert "пустым" in error.lower() or "empty" in error.lower()
+        assert "пустым" in error.lower()
 
         # Too long question
         max_length = int(os.getenv('MAX_QUESTION_LENGTH', '2500'))
         long_question = "x" * (max_length + 1)
         is_valid, error = InputValidator.validate_question(long_question)
         assert is_valid is False
-        assert "длинный" in error.lower() or "long" in error.lower()
+        assert "длинный" in error.lower()
 
 
 class TestCriticalSecurityChecks:
@@ -479,8 +502,8 @@ class TestCriticalMessageValidation:
                 len(parts[0]) == 0 or  # Empty action
                 (len(parts) >= 2 and len(parts[1]) == 0) or  # Empty ID
                 (len(parts) >= 2 and len(parts[1])
-                and not parts[1].isdigit())  # Non-digit ID
-    )
+                 and not parts[1].isdigit())  # Non-digit ID
+            )
             assert is_invalid, f"Expected {callback} to be invalid"
 
 

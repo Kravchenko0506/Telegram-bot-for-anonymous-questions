@@ -1,7 +1,18 @@
 """
-Fixed test configuration - solves Pydantic frozen instance issue.
+Test configuration and fixtures for the bot test suite.
 
-Key fix: Use unittest.mock.create_autospec instead of trying to modify frozen objects.
+This module provides:
+- Database fixtures with in-memory SQLite
+- Mock objects for bot testing
+- Test data factories
+- Helper functions for assertions
+- Environment setup and teardown
+
+Key components:
+- Database session management
+- Bot and user mocking
+- Message and callback simulation
+- Test data generation
 """
 
 import pytest
@@ -28,7 +39,13 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 
 def pytest_configure(config):
-    """Pytest configuration hook."""
+    """Configure pytest environment and register custom markers.
+
+    Sets up:
+    - Warning filters for deprecation notices
+    - Custom test markers for different test types
+    - Pydantic V2 compatibility settings
+    """
     import warnings
     from pydantic._internal._model_construction import PydanticDeprecatedSince20
 
@@ -56,7 +73,12 @@ def pytest_configure(config):
 
 @pytest_asyncio.fixture(scope="function")
 async def event_loop():
-    """Create an instance of the default event loop for each test case."""
+    """Create an instance of the default event loop for each test case.
+
+    Handles platform-specific event loop creation:
+    - Uses ProactorEventLoop for Windows
+    - Uses default event loop for other platforms
+    """
     if sys.platform == 'win32':
         loop = asyncio.ProactorEventLoop()
     else:
@@ -70,7 +92,14 @@ async def event_loop():
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    """Create test database engine with in-memory SQLite."""
+    """Create and configure test database engine.
+
+    Sets up:
+    - In-memory SQLite database
+    - Table creation for all models
+    - Connection pool configuration
+    - Automatic cleanup on test completion
+    """
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         poolclass=StaticPool,
@@ -96,7 +125,14 @@ async def test_engine():
 
 @pytest_asyncio.fixture(scope="function")
 async def clean_db(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create clean test database session for each test."""
+    """Provide clean database session for each test.
+
+    Features:
+    - Fresh database state for each test
+    - Automatic table cleanup
+    - Session management
+    - Error handling and cleanup
+    """
     async_session_factory = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
@@ -122,7 +158,13 @@ async def clean_db(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest.fixture
 def mock_bot():
-    """Create a mock bot."""
+    """Create a mock bot instance with common methods.
+
+    Mocked methods:
+    - send_message
+    - edit_message_text
+    - answer_callback_query
+    """
     bot = AsyncMock()
     bot.send_message = AsyncMock()
     bot.edit_message_text = AsyncMock()
@@ -132,7 +174,13 @@ def mock_bot():
 
 @pytest.fixture
 def test_user():
-    """Create a mock user for testing."""
+    """Create a mock user for testing.
+
+    Properties:
+    - Standard user ID
+    - Non-bot status
+    - Test username and first name
+    """
     user = MagicMock(spec=User)
     user.id = 123456789
     user.is_bot = False
@@ -143,7 +191,13 @@ def test_user():
 
 @pytest.fixture
 def admin_user():
-    """Create admin user object."""
+    """Create an admin user object for testing.
+
+    Properties:
+    - Admin ID from environment
+    - Non-bot status
+    - Admin username and first name
+    """
     admin_id = int(os.getenv('ADMIN_ID', '123456789'))
     return User(
         id=admin_id,
@@ -171,7 +225,14 @@ def admin_chat():
 
 @pytest.fixture
 def test_message(test_user, test_chat, mock_bot):
-    """Create test message object - FIXED for Pydantic V2."""
+    """Create a test message object with Pydantic V2 compatibility.
+
+    Features:
+    - Message ID and timestamp
+    - User and chat information
+    - Mock reply methods
+    - Bot instance reference
+    """
     # Create a mock that behaves like Message but allows attribute assignment
     message = MagicMock(spec=Message)
 

@@ -1,6 +1,23 @@
 """
-Configuration Module for Anonymous Questions Bot
+Configuration Management System
 
+A comprehensive configuration system for the Anonymous Questions Bot that handles:
+- Environment variable management
+- Database configuration
+- Bot settings and limits
+- Message templates
+- Security parameters
+- External service integration
+- Dynamic settings
+
+Features:
+- Environment variable validation
+- Type conversion
+- Default value handling
+- Configuration validation
+- Secure credential management
+- Internationalization support
+- Dynamic runtime configuration
 """
 
 import os
@@ -13,34 +30,60 @@ load_dotenv(override=True)
 
 def get_env_var(key: str, default: Optional[str] = None, required: bool = True) -> str:
     """
-    Get environment variable with validation.
-    
+    Retrieve and validate environment variables with comprehensive error handling.
+
+    This function provides a robust way to:
+    - Load environment variables
+    - Handle missing variables
+    - Provide default values
+    - Validate requirements
+
     Args:
-        key (str): Environment variable name
-        default (Optional[str]): Default value if variable not found
-        required (bool): Whether the variable is required
-        
+        key: Name of the environment variable to retrieve
+        default: Default value if variable is not found
+        required: Whether the variable must be present
+
     Returns:
-        str: Environment variable value
-        
+        str: The value of the environment variable
+
     Raises:
-        ValueError: If required variable is not found
+        ValueError: If a required variable is missing
     """
     value = os.getenv(key, default)
-    
+
     if required and not value:
         raise ValueError(
             f"Required environment variable '{key}' not found. "
             f"Please set it in your .env file or environment. "
             f"See .env.example for reference."
         )
-    
+
     return value
 
 
 def get_env_int(key: str, default: Optional[int] = None, required: bool = True) -> int:
-    """Get environment variable as integer."""
-    value = get_env_var(key, str(default) if default is not None else None, required)
+    """
+    Retrieve and convert environment variables to integers with validation.
+
+    This function:
+    - Retrieves the environment variable
+    - Converts string values to integers
+    - Handles conversion errors
+    - Provides default values
+
+    Args:
+        key: Name of the environment variable
+        default: Default integer value if variable is not found
+        required: Whether the variable must be present
+
+    Returns:
+        int: The integer value of the environment variable
+
+    Raises:
+        ValueError: If value cannot be converted to integer
+    """
+    value = get_env_var(
+        key, str(default) if default is not None else None, required)
     try:
         return int(value)
     except ValueError:
@@ -74,24 +117,30 @@ DB_NAME: str = get_env_var("DB_NAME")
 """PostgreSQL database name"""
 
 # Pagination Settings
-QUESTIONS_PER_PAGE: int = get_env_int("QUESTIONS_PER_PAGE", default=5, required=False)
+QUESTIONS_PER_PAGE: int = get_env_int(
+    "QUESTIONS_PER_PAGE", default=5, required=False)
 """Number of questions to show per page in admin interface"""
 
-MAX_PAGES_TO_SHOW: int = get_env_int("MAX_PAGES_TO_SHOW", default=100, required=False)
+MAX_PAGES_TO_SHOW: int = get_env_int(
+    "MAX_PAGES_TO_SHOW", default=100, required=False)
 """Maximum number of pages to show (prevents memory issues with huge databases)"""
 
 # Admin Interface Settings
-ADMIN_AUTO_REFRESH: bool = get_env_var("ADMIN_AUTO_REFRESH", default="false", required=False).lower() == "true"
+ADMIN_AUTO_REFRESH: bool = get_env_var(
+    "ADMIN_AUTO_REFRESH", default="false", required=False).lower() == "true"
 """Whether to auto-refresh admin lists after actions"""
 
-SHOW_QUESTION_PREVIEW_LENGTH: int = get_env_int("SHOW_QUESTION_PREVIEW_LENGTH", default=200, required=False)
+SHOW_QUESTION_PREVIEW_LENGTH: int = get_env_int(
+    "SHOW_QUESTION_PREVIEW_LENGTH", default=200, required=False)
 """Length of question preview in admin interface"""
 
 # Bot Settings - OPTIONAL with safe defaults
-MAX_QUESTION_LENGTH: int = get_env_int("MAX_QUESTION_LENGTH", default=2500, required=False)
+MAX_QUESTION_LENGTH: int = get_env_int(
+    "MAX_QUESTION_LENGTH", default=2500, required=False)
 """Maximum length of a question in characters"""
 
-MAX_ANSWER_LENGTH: int = get_env_int("MAX_ANSWER_LENGTH", default=5000, required=False)
+MAX_ANSWER_LENGTH: int = get_env_int(
+    "MAX_ANSWER_LENGTH", default=5000, required=False)
 """Maximum length of an answer in characters"""
 
 # Logging Configuration
@@ -99,14 +148,17 @@ LOG_LEVEL: str = get_env_var("LOG_LEVEL", default="INFO", required=False)
 """Logging level: DEBUG, INFO, WARNING, ERROR"""
 
 # Security Settings
-RATE_LIMIT_QUESTIONS_PER_HOUR: int = get_env_int("RATE_LIMIT_QUESTIONS_PER_HOUR", default=5, required=False)
+RATE_LIMIT_QUESTIONS_PER_HOUR: int = get_env_int(
+    "RATE_LIMIT_QUESTIONS_PER_HOUR", default=5, required=False)
 """Maximum questions per hour from one user"""
 
-RATE_LIMIT_COOLDOWN_SECONDS: int = get_env_int("RATE_LIMIT_COOLDOWN_SECONDS", default=30, required=False)
+RATE_LIMIT_COOLDOWN_SECONDS: int = get_env_int(
+    "RATE_LIMIT_COOLDOWN_SECONDS", default=30, required=False)
 """Minimum seconds between questions from same user"""
 
 # Optional: External Services
-SENTRY_DSN: Optional[str] = get_env_var("SENTRY_DSN", default=None, required=False)
+SENTRY_DSN: Optional[str] = get_env_var(
+    "SENTRY_DSN", default=None, required=False)
 """Sentry DSN for error tracking (optional)"""
 
 # Dynamic settings defaults (stored in database)
@@ -160,7 +212,7 @@ ADMIN_NEW_QUESTION: str = """
 ADMIN_NO_PENDING_QUESTIONS: str = "📭 Нет неотвеченных вопросов."
 ADMIN_NO_FAVORITES: str = "⭐ Нет избранных вопросов."
 
-# User Messages  
+# User Messages
 USER_ANSWER_RECEIVED: str = """
 💬 <b>Получен ответ на ваш вопрос:</b>
 
@@ -176,56 +228,70 @@ USER_QUESTION_PROCESSING: str = "⏳ Ваш вопрос отправлен и �
 
 def get_bot_link(unique_id: str) -> str:
     """
-    Generate bot link with unique start parameter.
-    
+    Generate a deep link to the bot with tracking parameters.
+
+    Creates a properly formatted Telegram bot link that includes:
+    - Bot username
+    - Start parameter for tracking
+    - UTM parameters if configured
+
     Args:
-        unique_id: Unique identifier for tracking
-        
+        unique_id: Tracking identifier for the link
+
     Returns:
-        str: Complete bot link
+        str: Complete bot deep link URL
     """
     return f"https://t.me/{BOT_USERNAME}?start={unique_id}"
 
 
 def validate_config() -> bool:
     """
-    Validate all required configuration parameters.
-    
+    Perform comprehensive validation of all configuration parameters.
+
+    Validates:
+    - Required environment variables
+    - Variable types and formats
+    - Value ranges and constraints
+    - Security requirements
+    - Database configuration
+    - External service settings
+
     Returns:
-        bool: True if all required parameters are valid
-        
+        bool: True if all validation checks pass
+
     Raises:
-        ValueError: If any required parameter is invalid
+        ValueError: If any configuration parameter is invalid
     """
     errors = []
-    
+
     # Check if TOKEN is valid (basic format check)
     if not TOKEN or len(TOKEN.split(':')) != 2:
         errors.append("Invalid BOT_TOKEN format")
-    
+
     # Check if ADMIN_ID is valid
     if ADMIN_ID <= 0:
         errors.append("ADMIN_ID must be a positive integer")
-    
+
     # Check database configuration
     if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
         errors.append("Database configuration incomplete")
-    
+
     # Validate numeric values
     if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:
         errors.append("Message length limits must be positive")
-    
+
     # Validate rate limits
     if RATE_LIMIT_QUESTIONS_PER_HOUR <= 0:
         errors.append("Rate limit must be positive")
-    
+
     if RATE_LIMIT_COOLDOWN_SECONDS <= 0:
         errors.append("Cooldown must be positive")
-    
+
     if errors:
-        error_message = "Configuration validation failed:\n" + "\n".join(f"- {e}" for e in errors)
+        error_message = "Configuration validation failed:\n" + \
+            "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_message)
-    
+
     return True
 
 

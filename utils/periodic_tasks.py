@@ -1,7 +1,22 @@
 """
-Periodic Tasks for Bot Maintenance
+Periodic Task Management System
 
-Runs background tasks to keep the bot healthy.
+A comprehensive system for managing and executing background maintenance tasks
+that ensure the bot's health, performance, and data integrity.
+
+Features:
+- Automated state cleanup
+- Database health monitoring
+- Task lifecycle management
+- Error recovery
+- Resource cleanup
+- Graceful shutdown
+
+Components:
+- Task Manager: Coordinates all periodic tasks
+- State Cleanup: Removes expired admin states
+- Health Monitor: Checks database connectivity
+- Error Handler: Manages task failures and recovery
 """
 
 import asyncio
@@ -14,21 +29,45 @@ logger = get_bot_logger()
 
 
 class PeriodicTaskManager:
-    """Manager for periodic background tasks."""
-    
+    """
+    Manages lifecycle and execution of periodic maintenance tasks.
+
+    This manager provides:
+    - Task coordination and scheduling
+    - Error handling and recovery
+    - Resource management
+    - Graceful startup/shutdown
+    - Task state monitoring
+
+    Features:
+    - Concurrent task execution
+    - Automatic error recovery
+    - Resource cleanup
+    - Task health monitoring
+    """
+
     def __init__(self):
         self.tasks: list[asyncio.Task] = []
         self.running = False
-    
+
     async def start(self):
-        """Start all periodic tasks."""
+        """
+        Start all periodic maintenance tasks.
+
+        This method:
+        - Prevents duplicate task starts
+        - Initializes task list
+        - Launches concurrent tasks
+        - Monitors task startup
+        - Logs task status
+        """
         if self.running:
             logger.warning("Periodic tasks already running")
             return
-        
+
         self.running = True
         logger.info("Starting periodic tasks...")
-        
+
         # Start individual tasks
         self.tasks.append(
             asyncio.create_task(self._cleanup_expired_states())
@@ -36,68 +75,105 @@ class PeriodicTaskManager:
         self.tasks.append(
             asyncio.create_task(self._database_health_check())
         )
-        
+
         logger.info(f"Started {len(self.tasks)} periodic tasks")
-    
+
     async def stop(self):
-        """Stop all periodic tasks."""
+        """
+        Stop all periodic tasks gracefully.
+
+        This method:
+        - Signals task termination
+        - Cancels running tasks
+        - Waits for task completion
+        - Cleans up resources
+        - Logs shutdown status
+        """
         if not self.running:
             return
-        
+
         self.running = False
         logger.info("Stopping periodic tasks...")
-        
+
         # Cancel all tasks
         for task in self.tasks:
             task.cancel()
-        
+
         # Wait for tasks to complete
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.tasks.clear()
-        
+
         logger.info("All periodic tasks stopped")
-    
+
     async def _cleanup_expired_states(self):
-        """Clean up expired admin states every hour."""
+        """
+        Periodically clean up expired admin states.
+
+        This task:
+        - Runs every hour
+        - Removes expired states
+        - Handles cleanup errors
+        - Logs cleanup results
+        - Implements automatic retry
+
+        Error handling:
+        - Graceful cancellation
+        - Automatic retry after failures
+        - Error logging and reporting
+        """
         while self.running:
             try:
                 logger.debug("Running expired states cleanup...")
-                
-                # ИСПРАВЛЕНО: Используем AdminStateManager вместо старой функции
+
                 from models.admin_state import AdminStateManager
-                
+
                 cleaned_count = await AdminStateManager.cleanup_expired_states()
-                
+
                 if cleaned_count > 0:
-                    logger.info(f"Cleaned up {cleaned_count} expired admin states")
+                    logger.info(
+                        f"Cleaned up {cleaned_count} expired admin states")
                 else:
                     logger.debug("No expired admin states found")
-                
+
                 # Run every hour
                 await asyncio.sleep(3600)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Error in cleanup task: {e}")
                 # Wait 5 minutes before retry
                 await asyncio.sleep(300)
-    
+
     async def _database_health_check(self):
-        """Check database health every 5 minutes."""
+        """
+        Monitor database health and connectivity.
+
+        This task:
+        - Runs every 5 minutes
+        - Verifies database connection
+        - Reports connectivity issues
+        - Implements automatic retry
+        - Logs health status
+
+        Error handling:
+        - Graceful cancellation
+        - Quick retry on failures
+        - Error logging and alerting
+        """
         while self.running:
             try:
                 from models.database import check_db_connection
-                
+
                 if not await check_db_connection():
                     logger.error("Database health check failed!")
                     # Could send alert to admin here
                 else:
                     logger.debug("Database health check passed")
-                
+
                 # Run every 5 minutes
                 await asyncio.sleep(300)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -110,10 +186,26 @@ periodic_task_manager = PeriodicTaskManager()
 
 
 async def start_periodic_tasks():
-    """Start all periodic tasks."""
+    """
+    Start the periodic task system.
+
+    This function:
+    - Initializes the task manager
+    - Starts all maintenance tasks
+    - Monitors startup process
+    - Ensures single instance
+    """
     await periodic_task_manager.start()
 
 
 async def stop_periodic_tasks():
-    """Stop all periodic tasks."""
+    """
+    Stop the periodic task system gracefully.
+
+    This function:
+    - Signals shutdown to task manager
+    - Waits for task completion
+    - Ensures clean resource cleanup
+    - Verifies shutdown status
+    """
     await periodic_task_manager.stop()

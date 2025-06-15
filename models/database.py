@@ -1,14 +1,33 @@
 """
-Database Configuration for Anonymous Questions Bot
+Database Management System
 
-Unified PostgreSQL setup using SQLAlchemy async engine.
-This module includes both Questions and Settings models.
+A comprehensive PostgreSQL database system for the Anonymous Questions Bot
+that provides robust data persistence, connection management, and ORM support.
+
+Core Features:
+- Asynchronous database operations
+- Connection pooling and management
+- Session handling and cleanup
+- Health monitoring
+- Default settings initialization
+- Error handling and recovery
+
+Technical Features:
+- SQLAlchemy async ORM integration
+- PostgreSQL with asyncpg driver
+- Connection pool configuration
+- Session lifecycle management
+- Database migration support
+- Resource cleanup
+- Health checks
 
 Architecture:
 - PostgreSQL as primary database
 - SQLAlchemy ORM for data modeling
-- Async operations for better performance
+- Async operations for performance
 - Connection pooling for scalability
+- Session-based transactions
+- Automatic cleanup
 """
 
 import os
@@ -58,17 +77,23 @@ Base = declarative_base()
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Dependency function for getting database sessions.
+    Create and manage database sessions with automatic cleanup.
 
-    Provides proper session management with automatic cleanup.
-    Use this in handlers and services for database operations.
+    This dependency function provides:
+    - Proper session lifecycle management
+    - Automatic resource cleanup
+    - Error handling and recovery
+    - Transaction management
+
+    Usage:
+        async with get_async_session() as session:
+            result = await session.execute(select(Question))
 
     Yields:
         AsyncSession: Database session for operations
 
-    Example:
-        async with get_async_session() as session:
-            result = await session.execute(select(Question))
+    Raises:
+        Exception: If session creation or operation fails
     """
     async with async_session() as session:
         try:
@@ -83,10 +108,16 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Initialize database tables.
+    Initialize and configure the database system.
 
-    Creates all tables defined in models if they don't exist.
-    This function is idempotent - safe to call multiple times.
+    This function:
+    - Creates database tables if they don't exist
+    - Initializes default settings
+    - Verifies database connectivity
+    - Sets up model relationships
+
+    The function is idempotent and can be safely called multiple times.
+    It will only create tables and settings that don't already exist.
 
     Raises:
         Exception: If database initialization fails
@@ -114,10 +145,15 @@ async def init_db() -> None:
 
 async def close_db() -> None:
     """
-    Close database engine and cleanup connections.
+    Perform graceful database shutdown and resource cleanup.
 
-    Call this function when shutting down the application
-    to ensure proper cleanup of database resources.
+    This function:
+    - Closes active connections
+    - Releases connection pool
+    - Cleans up resources
+    - Logs shutdown status
+
+    Should be called during application shutdown to ensure proper cleanup.
     """
     try:
         await engine.dispose()
@@ -128,7 +164,21 @@ async def close_db() -> None:
 
 # Database health check
 async def check_db_connection() -> bool:
-    """Check if database connection is healthy."""
+    """
+    Verify database connectivity and health.
+
+    This function:
+    - Tests database connection
+    - Verifies query execution
+    - Checks connection pool
+    - Logs connection status
+
+    Returns:
+        bool: True if database is healthy and accessible
+
+    Note:
+        This is a lightweight check suitable for health monitoring
+    """
     try:
         async with async_session() as session:
             from sqlalchemy import text
@@ -142,7 +192,21 @@ async def check_db_connection() -> bool:
 
 
 async def _initialize_default_settings() -> None:
-    """Initialize default settings in database if they don't exist."""
+    """
+    Set up initial database settings if they don't exist.
+
+    This function:
+    - Checks for existing settings
+    - Creates default settings if needed
+    - Maintains data consistency
+    - Logs initialization status
+
+    The function is idempotent and safe to call multiple times.
+    It will not override existing settings.
+
+    Raises:
+        Exception: If settings initialization fails
+    """
     try:
         from models.settings import BotSettings, SettingsManager
 

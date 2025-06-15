@@ -1,5 +1,26 @@
 """
-Questions Handler - Updated for Database State Management
+Question Management System
+
+A comprehensive system for handling question submission, validation,
+and processing in the Anonymous Questions Bot. This system ensures
+proper question flow and maintains data integrity.
+
+Features:
+- Question submission
+- Input validation
+- State management
+- Admin notifications
+- User feedback
+- Spam prevention
+- Privacy protection
+
+Technical Features:
+- Database integration
+- State tracking
+- Input sanitization
+- Content moderation
+- Error handling
+- Logging system
 """
 
 from aiogram import Router
@@ -36,7 +57,30 @@ logger = get_question_logger()
 
 @router.callback_query()
 async def user_callback_handler(callback: CallbackQuery):
-    """Handle user callback queries."""
+    """
+    Process user callback queries for question flow.
+
+    This handler:
+    - Validates user permissions
+    - Manages state transitions
+    - Provides user feedback
+    - Handles errors
+
+    Features:
+    - State management
+    - Error handling
+    - User feedback
+    - Activity logging
+
+    Flow:
+    1. Validate user
+    2. Process callback
+    3. Update state
+    4. Provide feedback
+
+    Args:
+        callback: Telegram callback query
+    """
     user_id = callback.from_user.id
 
     # Skip admin callbacks
@@ -74,12 +118,29 @@ async def user_callback_handler(callback: CallbackQuery):
 @router.message()
 async def unified_message_handler(message: Message):
     """
-    Unified handler for all text messages with validation.
+    Unified message processing system with role-based routing.
 
-    Handles:
-    1. Admin in answer mode
-    2. Admin replies to questions  
-    3. Regular user questions (with validation and state checks)
+    This handler provides:
+    - Role-based processing
+    - State validation
+    - Message routing
+    - Error handling
+
+    Features:
+    - Admin mode detection
+    - State management
+    - Message routing
+    - Error handling
+    - Activity logging
+
+    Flow:
+    1. Identify user role
+    2. Check user state
+    3. Route message
+    4. Process accordingly
+
+    Args:
+        message: Telegram message
     """
     user_id = message.from_user.id
 
@@ -88,7 +149,6 @@ async def unified_message_handler(message: Message):
         # Import here to avoid circular imports
         from handlers.admin_states import handle_admin_answer, is_admin_in_answer_mode
 
-        # ИСПРАВЛЕНИЕ: Убираем await - функция НЕ асинхронная
         in_answer_mode = is_admin_in_answer_mode(user_id)
 
         if in_answer_mode:
@@ -109,7 +169,31 @@ async def unified_message_handler(message: Message):
 
 
 async def handle_user_message(message: Message):
-    """Handle messages from regular users with state management."""
+    """
+    Process user messages with state validation.
+
+    This function:
+    - Validates user state
+    - Manages permissions
+    - Provides feedback
+    - Handles errors
+
+    Features:
+    - State validation
+    - Permission checking
+    - User feedback
+    - Error handling
+    - Activity logging
+
+    Flow:
+    1. Check user state
+    2. Validate permissions
+    3. Process message
+    4. Provide feedback
+
+    Args:
+        message: User's Telegram message
+    """
     user_id = message.from_user.id
 
     # Check if user can send a question
@@ -136,7 +220,33 @@ async def handle_user_message(message: Message):
 
 
 async def handle_user_question(message: Message):
-    """Handle incoming questions from users with validation."""
+    """
+    Process and validate user questions.
+
+    This function provides:
+    - Input validation
+    - Content moderation
+    - Privacy protection
+    - Database persistence
+    - Admin notification
+
+    Features:
+    - Text sanitization
+    - Spam detection
+    - PII detection
+    - State management
+    - Error handling
+
+    Flow:
+    1. Validate input
+    2. Sanitize content
+    3. Check for spam
+    4. Save question
+    5. Notify admin
+
+    Args:
+        message: User's question message
+    """
     user_id = message.from_user.id
 
     # Validate message content

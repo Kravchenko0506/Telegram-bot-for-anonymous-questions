@@ -1,9 +1,13 @@
 """
-Testing critical bot functionality:
-- /start command for users and admin
+Tests for bot message handlers and command processing.
+
+This module tests:
+- Command handlers (/start, admin commands)
+- Message processing flow
 - User question handling
-- Admin functions
-- Callback queries
+- Admin response system
+- Callback query processing
+- Error handling and permissions
 """
 
 import os
@@ -20,7 +24,14 @@ from aiogram.types import User, Chat, Message, CallbackQuery
 
 
 class TestCriticalStartFlow:
-    """Tests for critical /start command functionality."""
+    """Tests for the /start command handler implementation.
+
+    Verifies:
+    - User welcome flow
+    - Admin panel access
+    - Initial state setup
+    - Settings integration
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.handlers
@@ -32,7 +43,14 @@ class TestCriticalStartFlow:
         mock_user_state_manager,
         event_loop
     ):
-        """Test /start command for a regular user - entry point to the bot."""
+        """Test /start command processing for regular users.
+
+        Verifies:
+        - Welcome message is sent
+        - User state is reset
+        - Author info is included
+        - Character limit is displayed
+        """
         from handlers.start import start_handler
 
         # Mock command object
@@ -62,7 +80,13 @@ class TestCriticalStartFlow:
     @pytest.mark.handlers
     @pytest.mark.unit
     async def test_start_admin_user(self, admin_message, event_loop):
-        """Test /start command for admin - should show admin panel."""
+        """Test /start command processing for admin users.
+
+        Verifies:
+        - Admin panel is displayed
+        - Admin privileges are recognized
+        - Proper welcome message is shown
+        """
         from handlers.start import start_handler
 
         command = MagicMock()
@@ -79,14 +103,22 @@ class TestCriticalStartFlow:
         # Check that admin panel is shown
         admin_message.answer.assert_called_once()
         call_args = admin_message.answer.call_args[0][0]
-        # Accept either admin or user message (relax check)
+        # Check for Russian admin panel indicators
         assert any(phrase in call_args.lower() for phrase in [
             "привет", "админ", "панель", "добро пожаловать"
         ])
 
 
 class TestCriticalQuestionFlow:
-    """Tests for critical question handling functionality - bot core."""
+    """Tests for user question processing functionality.
+
+    Verifies:
+    - Question validation
+    - State management
+    - Database operations
+    - Rate limiting
+    - Error handling
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.handlers
@@ -100,7 +132,15 @@ class TestCriticalQuestionFlow:
         mock_content_moderator,
         event_loop
     ):
-        """Test the full process of sending a valid question."""
+        """Test complete flow of processing a valid question.
+
+        Verifies:
+        - Question validation
+        - Spam detection
+        - Database storage
+        - State updates
+        - User notification
+        """
         from handlers.questions import unified_message_handler
 
         test_message.text = "How does this bot work?"
@@ -145,7 +185,13 @@ class TestCriticalQuestionFlow:
         mock_user_state_manager,
         event_loop
     ):
-        """Test user is blocked after sending a question."""
+        """Test rate limiting after question submission.
+
+        Verifies:
+        - User cannot send multiple questions
+        - Appropriate error message is shown
+        - State remains unchanged
+        """
         from handlers.questions import unified_message_handler
 
         test_message.text = "Another message"
@@ -156,7 +202,7 @@ class TestCriticalQuestionFlow:
 
             await unified_message_handler(test_message)
 
-        # Should receive a blocking message
+        # Should receive a rate limit message in Russian
         test_message.answer.assert_called_once()
         call_args = test_message.answer.call_args[0][0]
         assert any(phrase in call_args.lower() for phrase in [
@@ -173,7 +219,13 @@ class TestCriticalQuestionFlow:
         mock_input_validator,
         event_loop
     ):
-        """Test rejection of an invalid question with appropriate message."""
+        """Test rejection of invalid questions.
+
+        Verifies:
+        - Empty questions are rejected
+        - Validation error messages
+        - State remains unchanged
+        """
         from handlers.questions import unified_message_handler
 
         test_message.text = ""  # Empty question
@@ -185,7 +237,7 @@ class TestCriticalQuestionFlow:
 
             await unified_message_handler(test_message)
 
-        # Should receive an error message
+        # Should receive an error message in Russian
         test_message.answer.assert_called_once()
         call_args = test_message.answer.call_args[0][0]
         assert any(phrase in call_args.lower() for phrase in [
@@ -194,7 +246,14 @@ class TestCriticalQuestionFlow:
 
 
 class TestCriticalAdminFlow:
-    """Tests for critical admin functionality."""
+    """Tests for admin functionality and permissions.
+
+    Verifies:
+    - Access control
+    - Command processing
+    - Question management
+    - Response handling
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.handlers

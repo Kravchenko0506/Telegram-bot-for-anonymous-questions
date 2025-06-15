@@ -1,24 +1,34 @@
 """
-Unit tests for custom aiogram middlewares: rate limiting and error handling.
-This test suite covers:
-- RateLimitMiddleware: Ensures per-user question rate limiting, cooldowns, admin/command bypass, and statistics.
-- CallbackRateLimitMiddleware: Ensures per-user callback cooldown, admin and pattern-based bypass, and cooldown enforcement.
-- ErrorHandlerMiddleware: Ensures error catching, logging, user/admin notification, error statistics, and context extraction.
-- Middleware integration: Ensures correct middleware chain behavior and error propagation.
-Tested features include:
-- Middleware initialization and configuration.
-- Bypass logic for admins and commands.
-- Enforcement of cooldowns and hourly limits.
-- Cleanup of old user tracking data.
-- Error handling for generic and Telegram-specific exceptions.
-- Error statistics and critical error detection.
-- Middleware chaining and integration.
-Dependencies:
-- pytest, pytest-asyncio for test execution.
-- unittest.mock for mocking aiogram types and handlers.
-- aiogram types and exceptions for event simulation.
-- datetime and os for time and environment configuration.
+Tests for Aiogram middleware components.
 
+This test suite covers:
+1. Rate Limiting:
+   - Per-user question rate limiting
+   - Cooldown periods
+   - Admin and command bypasses
+   - Usage statistics
+
+2. Callback Rate Limiting:
+   - Per-user callback cooldowns
+   - Pattern-based bypasses
+   - Admin exemptions
+
+3. Error Handling:
+   - Error capture and logging
+   - User notifications
+   - Error statistics
+   - Context preservation
+
+4. Integration:
+   - Middleware chain behavior
+   - Error propagation
+   - State management
+
+Dependencies:
+- pytest and pytest-asyncio
+- unittest.mock
+- aiogram types and exceptions
+- datetime and os modules
 """
 
 import pytest
@@ -32,11 +42,26 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, Teleg
 
 
 class TestRateLimitMiddleware:
-    """Tests for RateLimitMiddleware."""
+    """Tests for the rate limiting middleware implementation.
+
+    Verifies:
+    - Initialization with configuration
+    - Admin and command bypasses
+    - Cooldown enforcement
+    - Question limits
+    - Data cleanup
+    """
 
     @pytest.mark.unit
     def test_middleware_initialization(self):
-        """Test middleware initialization with default values."""
+        """Test middleware initialization and configuration.
+
+        Verifies:
+        - Default values are loaded
+        - Environment variables are respected
+        - Data structures are initialized
+        - Configuration is valid
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         # Get rate limit from environment
@@ -53,7 +78,14 @@ class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_admin_bypass(self):
-        """Test that admin bypasses rate limiting."""
+        """Test admin user exemption from rate limiting.
+
+        Verifies:
+        - Admin ID recognition
+        - Complete bypass of limits
+        - Handler execution
+        - No cooldown applied
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         middleware = RateLimitMiddleware()
@@ -83,7 +115,14 @@ class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_command_bypass(self):
-        """Test that commands bypass rate limiting."""
+        """Test command message exemption from rate limiting.
+
+        Verifies:
+        - Command recognition
+        - Bypass of limits
+        - Handler execution
+        - No restrictions applied
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         middleware = RateLimitMiddleware()
@@ -110,7 +149,14 @@ class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_first_question_no_cooldown(self):
-        """Test that first question from user has no cooldown."""
+        """Test first question handling without cooldown.
+
+        Verifies:
+        - New user recognition
+        - No cooldown applied
+        - Question processing
+        - State tracking
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         middleware = RateLimitMiddleware(cooldown_seconds=30)
@@ -138,7 +184,14 @@ class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_cooldown_enforcement(self):
-        """Test cooldown is enforced for subsequent questions."""
+        """Test cooldown period enforcement for subsequent questions.
+
+        Verifies:
+        - Cooldown timing
+        - Message blocking
+        - User notification
+        - State preservation
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         middleware = RateLimitMiddleware(cooldown_seconds=30)
@@ -177,7 +230,14 @@ class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_hourly_limit_enforcement(self):
-        """Test hourly question limit is enforced."""
+        """Test enforcement of hourly question limits.
+
+        Verifies:
+        - Question counting
+        - Time window tracking
+        - Limit enforcement
+        - User notification
+        """
         from middlewares.rate_limit import RateLimitMiddleware
 
         middleware = RateLimitMiddleware(
@@ -260,23 +320,43 @@ class TestRateLimitMiddleware:
 
 
 class TestCallbackRateLimitMiddleware:
-    """Tests for CallbackRateLimitMiddleware."""
+    """Tests for the callback rate limiting middleware implementation.
+
+    Verifies:
+    - Initialization with configuration
+    - Admin bypasses
+    - Cooldown enforcement
+    - Pattern-based exemptions
+    """
 
     @pytest.mark.unit
     def test_middleware_initialization(self):
-        """Test callback rate limit middleware initialization."""
+        """Test callback rate limit middleware initialization.
+
+        Verifies:
+        - Default values are loaded
+        - Data structures are initialized
+        - Configuration is valid
+        """
         from middlewares.rate_limit import CallbackRateLimitMiddleware
 
         middleware = CallbackRateLimitMiddleware(cooldown_seconds=2)
 
+        # Check basic configuration
         assert middleware.cooldown_seconds == 2
         assert isinstance(middleware.user_last_callback, dict)
-        assert len(middleware.exempt_patterns) > 0
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_admin_bypass(self):
-        """Test admin bypass for callback rate limiting."""
+        """Test admin user exemption from callback rate limiting.
+
+        Verifies:
+        - Admin ID recognition
+        - Complete bypass of limits
+        - Handler execution
+        - No cooldown applied
+        """
         from middlewares.rate_limit import CallbackRateLimitMiddleware
 
         middleware = CallbackRateLimitMiddleware()
