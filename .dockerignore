@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests
+Tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Development files
+Makefile
+pytest.ini
+requirements-dev.txt
+setup_tests.py
+run_tests.py
+test_diagnostics.py
+deployment_check.py
+
+# Misc
+.DS_Store
+Thumbs.db
