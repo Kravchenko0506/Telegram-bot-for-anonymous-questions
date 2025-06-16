@@ -1,33 +1,10 @@
 # Multi-stage build for smaller final image
-FROM python:3.10-slim as builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    python3-dev \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-
-# Final stage
 FROM python:3.10-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
-    libpq5 \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
 # Create non-root user
 RUN useradd -m -u 1000 botuser
@@ -35,14 +12,21 @@ RUN useradd -m -u 1000 botuser
 # Set working directory
 WORKDIR /app
 
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy application code
 COPY --chown=botuser:botuser . .
 
-# Create logs directory
-RUN mkdir -p logs && chown botuser:botuser logs
+# Create data and logs directories
+RUN mkdir -p data logs && chown -R botuser:botuser data logs
 
 # Switch to non-root user
 USER botuser
+
+# Volume for database persistence
+VOLUME ["/app/data", "/app/logs"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

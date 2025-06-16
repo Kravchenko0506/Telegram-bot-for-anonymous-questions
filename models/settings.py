@@ -59,12 +59,10 @@ class BotSettings(Base):
     No length limit for maximum flexibility.
     """
 
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False
-    )
+    updated_at = Column(DateTime, 
+                        server_default=func.now(),
+                        onupdate=func.now(), 
+                        nullable=False)
     """
     Last modification timestamp.
     Automatically updated on value changes.

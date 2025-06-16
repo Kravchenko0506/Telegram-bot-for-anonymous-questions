@@ -20,7 +20,7 @@ Features:
 
 from sqlalchemy import Column, BigInteger, Integer, String, DateTime, JSON
 from sqlalchemy.sql import func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 from models.database import Base, async_session
@@ -55,11 +55,9 @@ class AdminState(Base):
     state_data = Column(JSON, nullable=False, default=dict)
 
     # Timestamps с timezone=True
-    created_at = Column(DateTime(timezone=True),
-                        server_default=func.now(), nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(
-    ), onupdate=func.now(), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     def __repr__(self) -> str:
         return f"<AdminState(admin_id={self.admin_id}, type='{self.state_type}', expires={self.expires_at})>"
@@ -90,7 +88,7 @@ class AdminStateManager:
         Returns:
             datetime: Current UTC time as naive datetime
         """
-        return datetime.utcnow()
+        return datetime.now(timezone.utc).replace(tzinfo=None)
 
     @staticmethod
     def _convert_from_db(db_datetime):

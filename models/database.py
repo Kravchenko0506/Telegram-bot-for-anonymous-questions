@@ -1,68 +1,65 @@
 """
-Database Management System
+Database Management System with SQLite
 
-A comprehensive PostgreSQL database system for the Anonymous Questions Bot
-that provides robust data persistence, connection management, and ORM support.
+This module provides an asynchronous SQLite database interface using SQLAlchemy.
+It handles database connection, session management, and basic operations.
 
-Core Features:
-- Asynchronous database operations
-- Connection pooling and management
-- Session handling and cleanup
-- Health monitoring
-- Default settings initialization
-- Error handling and recovery
+The module sets up:
+- Async SQLite engine with foreign key support
+- Session factory for async database operations
+- Base declarative class for ORM models
+- Database initialization and connection management functions
 
-Technical Features:
-- SQLAlchemy async ORM integration
-- PostgreSQL with asyncpg driver
-- Connection pool configuration
-- Session lifecycle management
-- Database migration support
-- Resource cleanup
-- Health checks
-
-Architecture:
-- PostgreSQL as primary database
-- SQLAlchemy ORM for data modeling
-- Async operations for performance
-- Connection pooling for scalability
-- Session-based transactions
-- Automatic cleanup
+Note on datetime handling:
+- SQLite stores datetimes as naive (without timezone info)
+- All timestamps are stored in UTC but without timezone information
+- Application code handles timezone conversion when needed
 """
 
 import os
 import logging
 from typing import AsyncGenerator
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import event
 from dotenv import load_dotenv
-from sqlalchemy import text
 
 # Load environment variables
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Database configuration from environment
-DB_USER = os.getenv("DB_USER", "botanon")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "dbfrombot")
+# Create database directory if it doesn't exist
+DB_DIR = Path("data")
+DB_DIR.mkdir(exist_ok=True)
 
-# Construct database URL
-DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Database file path
+DB_PATH = DB_DIR / "bot_database.db"
 
-# Create async engine with connection pooling
+# SQLite connection string
+DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
+# Create async engine
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL query debugging
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,  # Validate connections before use
-    pool_recycle=3600,   # Recycle connections every hour
+    connect_args={"check_same_thread": False},  # Required for SQLite
 )
+
+# Enable foreign key support for SQLite
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """
+    Enable foreign key constraints for SQLite connections.
+    This function is called whenever a new database connection is created.
+    """
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
 
 # Create async session factory
 async_session = async_sessionmaker(
@@ -71,29 +68,20 @@ async_session = async_sessionmaker(
     expire_on_commit=False
 )
 
-# Create declarative base
+# Create declarative base for ORM models
 Base = declarative_base()
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Create and manage database sessions with automatic cleanup.
-
-    This dependency function provides:
-    - Proper session lifecycle management
-    - Automatic resource cleanup
-    - Error handling and recovery
-    - Transaction management
-
-    Usage:
-        async with get_async_session() as session:
-            result = await session.execute(select(Question))
+    Creates and yields an async database session.
 
     Yields:
-        AsyncSession: Database session for operations
+        AsyncSession: An active database session
 
-    Raises:
-        Exception: If session creation or operation fails
+    Notes:
+        - Uses context manager to ensure proper session cleanup
+        - Implements error handling and rollback on exceptions
     """
     async with async_session() as session:
         try:
@@ -108,35 +96,26 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Initialize and configure the database system.
+    Initializes the database by creating all tables and setting up default values.
 
     This function:
-    - Creates database tables if they don't exist
-    - Initializes default settings
-    - Verifies database connectivity
-    - Sets up model relationships
-
-    The function is idempotent and can be safely called multiple times.
-    It will only create tables and settings that don't already exist.
+    1. Creates database tables based on imported models
+    2. Sets up default settings values
 
     Raises:
         Exception: If database initialization fails
     """
     try:
         async with engine.begin() as conn:
-            # Import all models to ensure they're registered
             from models.questions import Question
             from models.settings import BotSettings
-            from models.user_states import UserState  # Import user states model
+            from models.user_states import UserState
+            from models.admin_state import AdminState
 
-            # Create all tables
             await conn.run_sync(Base.metadata.create_all)
 
-        # Initialize default settings if they don't exist
         await _initialize_default_settings()
-
-        logger.info(
-            "Database initialized successfully (Questions + Settings tables)")
+        logger.info("SQLite database initialized successfully")
 
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
@@ -145,15 +124,9 @@ async def init_db() -> None:
 
 async def close_db() -> None:
     """
-    Perform graceful database shutdown and resource cleanup.
+    Properly closes the database engine and releases all connections.
 
-    This function:
-    - Closes active connections
-    - Releases connection pool
-    - Cleans up resources
-    - Logs shutdown status
-
-    Should be called during application shutdown to ensure proper cleanup.
+    Should be called when shutting down the application.
     """
     try:
         await engine.dispose()
@@ -162,29 +135,19 @@ async def close_db() -> None:
         logger.error(f"Error closing database: {e}")
 
 
-# Database health check
 async def check_db_connection() -> bool:
     """
-    Verify database connectivity and health.
-
-    This function:
-    - Tests database connection
-    - Verifies query execution
-    - Checks connection pool
-    - Logs connection status
+    Tests if database connection is working.
 
     Returns:
-        bool: True if database is healthy and accessible
-
-    Note:
-        This is a lightweight check suitable for health monitoring
+        bool: True if connection is successful, False otherwise
     """
     try:
         async with async_session() as session:
             from sqlalchemy import text
             result = await session.execute(text("SELECT 1"))
             row = result.fetchone()
-            logger.info("PostgreSQL + asyncpg connection successful")
+            logger.info("SQLite connection successful")
             return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
@@ -193,25 +156,17 @@ async def check_db_connection() -> bool:
 
 async def _initialize_default_settings() -> None:
     """
-    Set up initial database settings if they don't exist.
+    Sets up default application settings in the database.
 
-    This function:
-    - Checks for existing settings
-    - Creates default settings if needed
-    - Maintains data consistency
-    - Logs initialization status
+    This function is called during database initialization to ensure
+    required settings exist in the database with default values.
 
-    The function is idempotent and safe to call multiple times.
-    It will not override existing settings.
-
-    Raises:
-        Exception: If settings initialization fails
+    Private function intended to be called only by init_db().
     """
     try:
         from models.settings import BotSettings, SettingsManager
 
         async with async_session() as session:
-            # Check if author_name exists
             author_setting = await session.get(BotSettings, 'author_name')
             if not author_setting:
                 author_setting = BotSettings(
@@ -220,7 +175,6 @@ async def _initialize_default_settings() -> None:
                 )
                 session.add(author_setting)
 
-            # Check if author_info exists
             info_setting = await session.get(BotSettings, 'author_info')
             if not info_setting:
                 info_setting = BotSettings(

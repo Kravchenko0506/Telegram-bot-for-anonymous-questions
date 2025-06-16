@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.pyc
 *.env
@@ -6,12 +7,51 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+venv/
+env/
 .vscode/
-logs/adminlogger.log
-logs/botlogger.log
-logs/questionlogger.log
-debug.log
-bot.log
+*.egg-info/
+dist/
+build/
+Files/
+
+# SQLite database files
+data/
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite3
+backup_*.db
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Documentation build
+docs/_build/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# System files
+Thumbs.db
+desktop.ini
 
 
 

@@ -3,7 +3,7 @@ aiogram==3.4.1
 sentry-sdk==2.29.1
 
 # Database
-asyncpg==0.29.0
+aiosqlite==0.19.0
 sqlalchemy[asyncio]==2.0.25
 
 # Environment variables

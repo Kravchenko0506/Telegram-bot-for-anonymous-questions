@@ -100,22 +100,6 @@ ADMIN_ID: int = get_env_int("ADMIN_ID")
 BOT_USERNAME: str = get_env_var("BOT_USERNAME")
 """Bot username for generating links (without @)"""
 
-# Database Configuration - REQUIRED
-DB_USER: str = get_env_var("DB_USER")
-"""PostgreSQL username"""
-
-DB_PASSWORD: str = get_env_var("DB_PASSWORD")
-"""PostgreSQL password - NEVER commit real passwords!"""
-
-DB_HOST: str = get_env_var("DB_HOST")
-"""PostgreSQL host address"""
-
-DB_PORT: str = get_env_var("DB_PORT")
-"""PostgreSQL port"""
-
-DB_NAME: str = get_env_var("DB_NAME")
-"""PostgreSQL database name"""
-
 # Pagination Settings
 QUESTIONS_PER_PAGE: int = get_env_int(
     "QUESTIONS_PER_PAGE", default=5, required=False)
@@ -272,9 +256,7 @@ def validate_config() -> bool:
     if ADMIN_ID <= 0:
         errors.append("ADMIN_ID must be a positive integer")
 
-    # Check database configuration
-    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-        errors.append("Database configuration incomplete")
+    
 
     # Validate numeric values
     if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:

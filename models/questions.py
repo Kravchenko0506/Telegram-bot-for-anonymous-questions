@@ -112,29 +112,25 @@ class Question(Base):
     """
 
     # Timestamps
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-        index=True
-    )
+    created_at = Column(DateTime, 
+                        server_default=func.now(), 
+                        nullable=False, 
+                        index=True)
     """
     Question submission timestamp.
     Timezone-aware and indexed for chronological access.
     """
 
-    answered_at = Column(DateTime(timezone=True), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
     """
     Answer timestamp.
     Null for pending questions, set when admin responds.
     """
 
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False
-    )
+    updated_at = Column(DateTime, 
+                server_default=func.now(),
+                onupdate=func.now(), 
+                nullable=False)
     """
     Last modification timestamp.
     Automatically updated on any change.

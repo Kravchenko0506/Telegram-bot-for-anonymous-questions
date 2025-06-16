@@ -72,7 +72,7 @@ class UserState(Base):
     Controls question flow and command handling.
     """
 
-    last_question_at = Column(DateTime(timezone=True), nullable=True)
+    last_question_at = Column(DateTime, nullable=True)
     """
     Timestamp of last question submission.
     Used for rate limiting and analytics.
@@ -86,21 +86,20 @@ class UserState(Base):
 
     # Timestamps
     created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+        DateTime,  
+        server_default=func.now(), 
+        nullable=False)
     """
     Account creation timestamp.
     Timezone-aware for accurate tracking.
     """
 
     updated_at = Column(
-        DateTime(timezone=True),
+        DateTime,
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
-    )
+)
     """
     Last activity timestamp.
     Automatically updated on state changes.

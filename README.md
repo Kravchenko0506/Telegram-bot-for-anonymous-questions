@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![aiogram](https://img.shields.io/badge/aiogram-3.4.1-green.svg)](https://docs.aiogram.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12%2B-blue.svg)](https://www.postgresql.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-blue.svg)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 
@@ -55,7 +55,7 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 ### Requirements
 
 - Python 3.10+
-- PostgreSQL 12+
+- SQLite 3 (included with Python)
 - Linux/macOS/Windows
 
 ### Quick Start
@@ -79,25 +79,18 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
    pip install -r requirements.txt
    ```
 
-4. **Setup PostgreSQL**
-   ```sql
-   CREATE USER botanon WITH PASSWORD 'your_password';
-   CREATE DATABASE dbfrombot OWNER botanon;
-   GRANT ALL PRIVILEGES ON DATABASE dbfrombot TO botanon;
-   ```
-
-5. **Configure settings**
+4. **Configure settings**
    ```bash
    cp .env.example .env
    nano .env  # Edit parameters
    ```
 
-6. **Initialize database**
+5. **Initialize database**
    ```bash
    python reset_database.py
    ```
 
-7. **Start the bot**
+6. **Start the bot**
    ```bash
    python main.py
    ```
@@ -109,13 +102,6 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz  # Token from @BotFather
 ADMIN_ID=123456789                              # Your Telegram ID
 BOT_USERNAME=your_bot_username                  # Bot username without @
-
-# Database
-DB_USER=botanon
-DB_PASSWORD=secure_password_here
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_NAME=dbfrombot
 
 # Optional parameters
 LOG_LEVEL=INFO                      # DEBUG, INFO, WARNING, ERROR
@@ -259,7 +245,7 @@ anon-questions-bot/
 
 - **Language**: Python 3.10+
 - **Framework**: aiogram 3.4.1
-- **Database**: PostgreSQL + asyncpg
+- **Database**: SQLite + aiosqlite
 - **ORM**: SQLAlchemy 2.0 (async)
 - **Testing**: pytest + pytest-asyncio
 - **Logging**: Python logging + rotation
