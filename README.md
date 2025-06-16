@@ -327,7 +327,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Kravchenko Aleksandr** - [kravchenkoaleksandr0506@gmail.com]
+- **Kravchenko Aleksandr** - [Email - kravchenkoaleksandr0506@gmail.com]
 
 ## 🙏 Acknowledgments
 
