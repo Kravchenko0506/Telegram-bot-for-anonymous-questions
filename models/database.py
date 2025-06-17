@@ -30,12 +30,16 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Create database directory if it doesn't exist
-DB_DIR = Path("data")
+# ИСПРАВЛЕНО: Используем абсолютный путь для Amvera persistent storage
+DB_DIR = Path("/data")  # ✅ Правильный путь для Amvera
 DB_DIR.mkdir(exist_ok=True)
 
-# Database file path
+# Database file path в персистентном хранилище
 DB_PATH = DB_DIR / "bot_database.db"
+
+# Логируем где будет база данных
+print(f"🗄️ Database will be stored at: {DB_PATH}")
+logger.info(f"Database path: {DB_PATH}")
 
 # SQLite connection string
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
@@ -48,8 +52,6 @@ engine = create_async_engine(
 )
 
 # Enable foreign key support for SQLite
-
-
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """
@@ -106,6 +108,9 @@ async def init_db() -> None:
         Exception: If database initialization fails
     """
     try:
+        # Проверяем что база будет создана в правильном месте
+        print(f"🔧 Initializing database at: {DB_PATH}")
+        
         async with engine.begin() as conn:
             from models.questions import Question
             from models.settings import BotSettings
@@ -115,10 +120,18 @@ async def init_db() -> None:
             await conn.run_sync(Base.metadata.create_all)
 
         await _initialize_default_settings()
-        logger.info("SQLite database initialized successfully")
+        
+        # Проверяем что файл действительно создался
+        if DB_PATH.exists():
+            file_size = DB_PATH.stat().st_size
+            print(f"✅ Database file created: {DB_PATH} (size: {file_size} bytes)")
+            logger.info(f"SQLite database initialized successfully at {DB_PATH}")
+        else:
+            print(f"❌ Database file not found at {DB_PATH}")
 
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
+        print(f"❌ Database initialization failed: {e}")
         raise
 
 
@@ -147,10 +160,12 @@ async def check_db_connection() -> bool:
             from sqlalchemy import text
             result = await session.execute(text("SELECT 1"))
             row = result.fetchone()
+            print(f"✅ Database connection successful: {DB_PATH}")
             logger.info("SQLite connection successful")
             return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
+        print(f"❌ Database connection failed: {e}")
         return False
 
 
@@ -188,3 +203,29 @@ async def _initialize_default_settings() -> None:
 
     except Exception as e:
         logger.error(f"Failed to initialize default settings: {e}")
+
+
+# Функция для проверки персистентности (для отладки)
+async def check_persistence() -> dict:
+    """
+    Check if database persists between restarts.
+    Returns info about database file and tables.
+    """
+    info = {
+        "db_path": str(DB_PATH),
+        "exists": DB_PATH.exists(),
+        "size": DB_PATH.stat().st_size if DB_PATH.exists() else 0,
+        "tables": []
+    }
+    
+    if DB_PATH.exists():
+        try:
+            async with async_session() as session:
+                from sqlalchemy import text
+                result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+                tables = [row[0] for row in result.fetchall()]
+                info["tables"] = tables
+        except Exception as e:
+            info["error"] = str(e)
+    
+    return info
