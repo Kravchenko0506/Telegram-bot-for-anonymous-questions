@@ -63,13 +63,8 @@ def get_env_var(key: str, default: Optional[str] = None, required: bool = True) 
 
 def get_env_int(key: str, default: Optional[int] = None, required: bool = True) -> int:
     """
-    Retrieve and convert environment variables to integers with validation.
-
-    This function:
-    - Retrieves the environment variable
-    - Converts string values to integers
-    - Handles conversion errors
-    - Provides default values
+    Get integer environment variable with robust error handling.
+    Handles various hosting platform quirks.
 
     Args:
         key: Name of the environment variable
@@ -80,14 +75,32 @@ def get_env_int(key: str, default: Optional[int] = None, required: bool = True) 
         int: The integer value of the environment variable
 
     Raises:
-        ValueError: If value cannot be converted to integer
+        ValueError: If value cannot be converted to integer with detailed message
     """
     value = get_env_var(
         key, str(default) if default is not None else None, required)
+
+    # Убираем возможные префиксы (фикс для некоторых хостингов)
+    if '=' in value:
+        value = value.split('=')[-1]
+
+    # Убираем пробелы и другие символы
+    value = value.strip()
+
+    # Убираем кавычки если есть
+    if value.startswith('"') and value.endswith('"'):
+        value = value[1:-1]
+    if value.startswith("'") and value.endswith("'"):
+        value = value[1:-1]
+
     try:
-        return int(value)
-    except ValueError:
-        raise ValueError(f"Environment variable '{key}' must be an integer")
+        result = int(value)
+        return result
+    except ValueError as e:
+        print(
+            f"Error parsing {key}: '{value}' (original: '{get_env_var(key)}')")
+        raise ValueError(
+            f"Environment variable '{key}' must be an integer, got: '{value}'. Original value: '{get_env_var(key)}'")
 
 
 # Bot Configuration - REQUIRED
@@ -255,8 +268,6 @@ def validate_config() -> bool:
     # Check if ADMIN_ID is valid
     if ADMIN_ID <= 0:
         errors.append("ADMIN_ID must be a positive integer")
-
-    
 
     # Validate numeric values
     if MAX_QUESTION_LENGTH <= 0 or MAX_ANSWER_LENGTH <= 0:
