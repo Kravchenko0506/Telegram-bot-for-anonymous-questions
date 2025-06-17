@@ -70,11 +70,12 @@ class TestCriticalStartFlow:
 
         # Check that a welcome message was sent
         test_message.answer.assert_called_once()
-        call_args = test_message.answer.call_args[0][0]
+        args, kwargs = test_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
 
         # Check that the message contains data from settings
-        assert "Test Author" in call_args
-        assert "2500" in call_args  # Default MAX_QUESTION_LENGTH
+        assert "Test Author" in call_text
+        assert "2500" in call_text  # Default MAX_QUESTION_LENGTH
 
     @pytest.mark.asyncio
     @pytest.mark.handlers
@@ -102,9 +103,10 @@ class TestCriticalStartFlow:
 
         # Check that admin panel is shown
         admin_message.answer.assert_called_once()
-        call_args = admin_message.answer.call_args[0][0]
+        args, kwargs = admin_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
         # Check for Russian admin panel indicators
-        assert any(phrase in call_args.lower() for phrase in [
+        assert any(phrase in call_text.lower() for phrase in [
             "привет", "админ", "панель", "добро пожаловать"
         ])
 
@@ -204,8 +206,9 @@ class TestCriticalQuestionFlow:
 
         # Should receive a rate limit message in Russian
         test_message.answer.assert_called_once()
-        call_args = test_message.answer.call_args[0][0]
-        assert any(phrase in call_args.lower() for phrase in [
+        args, kwargs = test_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
+        assert any(phrase in call_text.lower() for phrase in [
             "предыдущий вопрос", "кнопку", "ожидани", "ошибка"
         ])
 
@@ -239,8 +242,9 @@ class TestCriticalQuestionFlow:
 
         # Should receive an error message in Russian
         test_message.answer.assert_called_once()
-        call_args = test_message.answer.call_args[0][0]
-        assert any(phrase in call_args.lower() for phrase in [
+        args, kwargs = test_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
+        assert any(phrase in call_text.lower() for phrase in [
             "пустым", "ошибка", "не может быть"
         ])
 
@@ -266,8 +270,9 @@ class TestCriticalAdminFlow:
 
         # Should receive an access denied message
         test_message.answer.assert_called_once()
-        call_args = test_message.answer.call_args[0][0]
-        assert "администратору" in call_args.lower()
+        args, kwargs = test_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
+        assert "администратору" in call_text.lower()
 
     @pytest.mark.asyncio
     @pytest.mark.handlers
@@ -286,8 +291,9 @@ class TestCriticalAdminFlow:
             await admin_command(admin_message)
 
         admin_message.answer.assert_called_once()
-        call_args = admin_message.answer.call_args[0][0]
-        assert any(phrase in call_args.lower() for phrase in [
+        args, kwargs = admin_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
+        assert any(phrase in call_text.lower() for phrase in [
             "админ", "панель", "статистика"
         ])
 
@@ -513,8 +519,9 @@ class TestPermissions:
             await command_func(test_message)
 
             test_message.answer.assert_called_once()
-            call_args = test_message.answer.call_args[0][0]
-            assert "администратору" in call_args.lower()
+            args, kwargs = test_message.answer.call_args
+            call_text = args[0] if args else kwargs.get('text', '')
+            assert "администратору" in call_text.lower()
 
     @pytest.mark.asyncio
     @pytest.mark.handlers
@@ -533,8 +540,9 @@ class TestPermissions:
 
         # Should get admin panel, not access denied
         admin_message.answer.assert_called_once()
-        call_args = admin_message.answer.call_args[0][0]
-        assert any(phrase in call_args.lower() for phrase in [
+        args, kwargs = admin_message.answer.call_args
+        call_text = args[0] if args else kwargs.get('text', '')
+        assert any(phrase in call_text.lower() for phrase in [
             "админ", "панель", "статистика"
         ])
 

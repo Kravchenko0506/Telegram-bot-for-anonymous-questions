@@ -159,9 +159,7 @@ async def check_db_connection() -> bool:
         async with async_session() as session:
             from sqlalchemy import text
             result = await session.execute(text("SELECT 1"))
-            row = result.fetchone()
-            print(f"✅ Database connection successful: {DB_PATH}")
-            logger.info("SQLite connection successful")
+            row = result.fetchone()            
             return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

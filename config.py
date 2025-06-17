@@ -146,11 +146,11 @@ LOG_LEVEL: str = get_env_var("LOG_LEVEL", default="INFO", required=False)
 
 # Security Settings
 RATE_LIMIT_QUESTIONS_PER_HOUR: int = get_env_int(
-    "RATE_LIMIT_QUESTIONS_PER_HOUR", default=5, required=False)
+    "RATE_LIMIT_QUESTIONS_PER_HOUR", default=500, required=False)
 """Maximum questions per hour from one user"""
 
 RATE_LIMIT_COOLDOWN_SECONDS: int = get_env_int(
-    "RATE_LIMIT_COOLDOWN_SECONDS", default=30, required=False)
+    "RATE_LIMIT_COOLDOWN_SECONDS", default=5, required=False)
 """Minimum seconds between questions from same user"""
 
 # Optional: External Services

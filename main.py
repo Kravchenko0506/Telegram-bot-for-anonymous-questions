@@ -211,7 +211,8 @@ async def on_startup(bot: Bot) -> None:
     bot_info = await bot.get_me()
     logger.info(f"Bot started: @{bot_info.username}")
 
-    # Notify admin
+    # Notify admin 
+    """
     try:
         await bot.send_message(
             ADMIN_ID,
@@ -221,6 +222,7 @@ async def on_startup(bot: Bot) -> None:
         )
     except Exception as e:
         logger.error(f"Failed to notify admin on startup: {e}")
+    """
 
 
 async def on_shutdown(bot: Bot) -> None:
@@ -240,11 +242,13 @@ async def on_shutdown(bot: Bot) -> None:
     # Stop periodic tasks
     await stop_periodic_tasks()
 
-    # Notify admin
+    # Notify admin 
+    """
     try:
         await bot.send_message(ADMIN_ID, "⚠️ Бот остановлен")
     except Exception:
         pass  # Ignore errors on shutdown
+    """
 
     # Close bot session
     await bot.session.close()

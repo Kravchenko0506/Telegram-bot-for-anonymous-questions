@@ -6,31 +6,32 @@ Contains all inline keyboard layouts for admin question management with paginati
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def get_admin_question_keyboard(question_id: int, is_favorite: bool = False) -> InlineKeyboardMarkup:
     """Create inline keyboard for admin question management."""
     favorite_text = "⭐ Убрать из избранного" if is_favorite else "⭐ Добавить в избранное"
-    
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✉️ Ответить", 
+                    text="✉️ Ответить",
                     callback_data=f"answer:{question_id}"
                 ),
                 InlineKeyboardButton(
-                    text=favorite_text, 
+                    text=favorite_text,
                     callback_data=f"favorite:{question_id}"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🗑️ Удалить", 
+                    text="🗑️ Удалить",
                     callback_data=f"delete:{question_id}"
                 )
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -46,7 +47,7 @@ def get_user_question_sent_keyboard() -> InlineKeyboardMarkup:
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -62,7 +63,7 @@ def get_user_blocked_keyboard() -> InlineKeyboardMarkup:
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -72,7 +73,7 @@ def get_cancel_answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="❌ Отменить ответ", 
+                    text="❌ Отменить ответ",
                     callback_data=f"cancel_answer:{question_id}"
                 )
             ]
@@ -87,12 +88,20 @@ def get_favorite_question_keyboard(question_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✉️ Ответить", 
+                    text="✉️ Ответить",
                     callback_data=f"answer:{question_id}"
-                ),
+                )
+            ],
+            [
                 InlineKeyboardButton(
-                    text="🗑️ Удалить из избранного", 
+                    text="⭐ Убрать из избранного",
                     callback_data=f"remove_favorite:{question_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Удалить",
+                    callback_data=f"delete:{question_id}"
                 )
             ]
         ]
@@ -103,10 +112,10 @@ def get_favorite_question_keyboard(question_id: int) -> InlineKeyboardMarkup:
 def get_answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
     """
     Create keyboard for answer mode.
-    
+
     Args:
         question_id: ID of question being answered
-        
+
     Returns:
         InlineKeyboardMarkup: Keyboard with cancel option
     """
@@ -114,13 +123,13 @@ def get_answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="❌ Отменить ответ", 
+                    text="❌ Отменить ответ",
                     callback_data=f"cancel_answer:{question_id}"
                 )
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -138,7 +147,7 @@ def get_admin_panel_keyboard() -> InlineKeyboardMarkup:
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -149,17 +158,17 @@ def get_pagination_keyboard(
 ) -> InlineKeyboardMarkup:
     """
     Create pagination keyboard for question lists.
-    
+
     Args:
         current_page: Current page number (0-based)
         total_pages: Total number of pages
         callback_prefix: Prefix for callback data (e.g., "pending_page", "favorites_page")
-    
+
     Returns:
         InlineKeyboardMarkup: Pagination keyboard
     """
     buttons = []
-    
+
     # Previous page button
     if current_page > 0:
         buttons.append(
@@ -168,7 +177,7 @@ def get_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page - 1}"
             )
         )
-    
+
     # Page indicator (show current/total)
     buttons.append(
         InlineKeyboardButton(
@@ -176,7 +185,7 @@ def get_pagination_keyboard(
             callback_data="noop"  # Non-functional button for display only
         )
     )
-    
+
     # Next page button
     if current_page < total_pages - 1:
         buttons.append(
@@ -185,7 +194,7 @@ def get_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page + 1}"
             )
         )
-    
+
     # If only one button (page indicator), still show it
     keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons])
     return keyboard
@@ -207,7 +216,7 @@ def get_confirmation_keyboard(action: str, question_id: int) -> InlineKeyboardMa
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -223,7 +232,7 @@ def get_stats_keyboard() -> InlineKeyboardMarkup:
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -245,7 +254,7 @@ def get_clear_confirmation_keyboard() -> InlineKeyboardMarkup:
             ]
         ]
     )
-    
+
     return keyboard
 
 
@@ -257,24 +266,24 @@ def get_advanced_pagination_keyboard(
 ) -> InlineKeyboardMarkup:
     """
     Create advanced pagination keyboard with first/last page buttons.
-    
+
     Args:
         current_page: Current page number (0-based)
         total_pages: Total number of pages
         callback_prefix: Prefix for callback data
         show_first_last: Whether to show first/last page buttons
-    
+
     Returns:
         InlineKeyboardMarkup: Advanced pagination keyboard
     """
     if total_pages <= 1:
         return None
-    
+
     buttons = []
-    
+
     # First row: First, Previous, Page indicator, Next, Last
     first_row = []
-    
+
     # First page button (only if not on first page and more than 3 pages)
     if show_first_last and current_page > 1 and total_pages > 3:
         first_row.append(
@@ -283,7 +292,7 @@ def get_advanced_pagination_keyboard(
                 callback_data=f"{callback_prefix}:0"
             )
         )
-    
+
     # Previous page button
     if current_page > 0:
         first_row.append(
@@ -292,7 +301,7 @@ def get_advanced_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page - 1}"
             )
         )
-    
+
     # Current page indicator
     first_row.append(
         InlineKeyboardButton(
@@ -300,7 +309,7 @@ def get_advanced_pagination_keyboard(
             callback_data="noop"
         )
     )
-    
+
     # Next page button
     if current_page < total_pages - 1:
         first_row.append(
@@ -309,7 +318,7 @@ def get_advanced_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page + 1}"
             )
         )
-    
+
     # Last page button (only if not on last page and more than 3 pages)
     if show_first_last and current_page < total_pages - 2 and total_pages > 3:
         first_row.append(
@@ -318,15 +327,15 @@ def get_advanced_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{total_pages - 1}"
             )
         )
-    
+
     buttons.append(first_row)
-    
+
     # Second row: Quick jump buttons for nearby pages (optional)
     if total_pages > 5:
         second_row = []
         start_page = max(0, current_page - 2)
         end_page = min(total_pages - 1, current_page + 2)
-        
+
         for page in range(start_page, end_page + 1):
             if page != current_page:  # Don't show current page button
                 second_row.append(
@@ -335,9 +344,9 @@ def get_advanced_pagination_keyboard(
                         callback_data=f"{callback_prefix}:{page}"
                     )
                 )
-        
+
         if len(second_row) > 0:
             buttons.append(second_row)
-    
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard

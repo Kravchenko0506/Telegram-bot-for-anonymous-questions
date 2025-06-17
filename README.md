@@ -4,9 +4,9 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![aiogram](https://img.shields.io/badge/aiogram-3.4.1-green.svg)](https://docs.aiogram.dev/)
-[![SQLite](https://img.shields.io/badge/SQLite-3-blue.svg)](https://www.sqlite.org/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0.25-blue.svg)](https://www.sqlalchemy.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
+[![Code Coverage](https://img.shields.io/badge/coverage-61%25-brightgreen.svg)](https://github.com/your-repo)
 
 A Telegram bot for anonymous questions with advanced admin features
 
@@ -55,23 +55,23 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 ### Requirements
 
 - Python 3.10+
-- SQLite 3 (included with Python)
+- SQLite or PostgreSQL
 - Linux/macOS/Windows
 
 ### Quick Start
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Kravchenko0506/Telegram-bot-for-anonymous-questions
+   git clone https://github.com/yourusername/anon-questions-bot.git
    cd anon-questions-bot
    ```
 
 2. **Create virtual environment**
    ```bash
-   python3.10 -m venv venv
-   source venv/bin/activate  # Linux/macOS
+   python -m venv .venv
+   source .venv/bin/activate  # Linux/macOS
    # or
-   venv\Scripts\activate  # Windows
+   .venv\Scripts\activate  # Windows
    ```
 
 3. **Install dependencies**
@@ -82,7 +82,7 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 4. **Configure settings**
    ```bash
    cp .env.example .env
-   nano .env  # Edit parameters
+   # Edit parameters in .env file
    ```
 
 5. **Initialize database**
@@ -179,37 +179,57 @@ SENTRY_DSN=                         # For error monitoring (optional)
 ### Running Tests
 
 ```bash
-# Quick unit tests
-make test-quick
+# Running tests via Python script
+python run_tests.py quick      # Quick unit tests
+python run_tests.py full       # Full testing with coverage report
+python run_tests.py integration # Integration tests only
+python run_tests.py handlers   # Handler tests
+python run_tests.py models     # Model tests
 
-# Full testing with coverage report
-make test-full
+# Or via Makefile
+make test-quick               # Quick unit tests
+make test-full                # Full testing with coverage
+make test-integration         # Integration tests
+make test-handlers            # Handler tests
+make test-models              # Model tests
+make test-utils               # Utility tests
+make test-middleware          # Middleware tests
 
-# Integration tests only
-make test-integration
-
-# Specific component tests
-make test-handlers
-make test-models
-make test-utils
-make test-middleware
+# Or directly via pytest
+python -m pytest Tests/                            # All tests
+python -m pytest Tests/ -m unit                    # Unit tests only
+python -m pytest Tests/ -m integration             # Integration tests only
+python -m pytest Tests/test_handlers.py            # Handler tests only
+python -m pytest Tests/ --cov=. --cov-report=html  # Generate coverage report
 ```
 
 ### Test Structure
 
 ```
 Tests/
-├── test_handlers.py      # Command handler tests
-├── test_models.py        # Data model tests
-├── test_utils.py         # Utility tests
-├── test_middleware.py    # Middleware tests
-├── test_integration.py   # Integration tests
-└── conftest.py          # Fixtures and configuration
+├── conftest.py          # Fixtures and configuration
+├── test_handlers.py     # Command handler tests
+├── test_models.py       # Data model tests
+├── test_utils.py        # Utility tests
+├── test_middleware.py   # Middleware tests
+└── test_integration.py  # Integration tests
+
 ```
+
+### Test Categories
+
+- **Quick tests (unit)**: Isolated tests without external dependencies
+- **Integration tests**: Tests with real database and component interaction
+- **Handler tests**: Testing bot interaction and command processing
+- **Model tests**: Testing database operations and models
+- **Utility tests**: Testing utility functions and validation
+- **Middleware tests**: Testing middleware components
 
 ### Code Coverage
 
-After running `make test-full`, coverage report is available at `Tests/coverage_html/index.html`
+After running `make test-full` or `python run_tests.py full`, coverage report is available at `htmlcov/index.html`.
+
+Current code coverage: approximately 61%.
 
 ## 🏗️ Architecture
 
@@ -245,7 +265,7 @@ anon-questions-bot/
 
 - **Language**: Python 3.10+
 - **Framework**: aiogram 3.4.1
-- **Database**: SQLite + aiosqlite
+- **Database**: SQLite/PostgreSQL + asyncpg/aiosqlite
 - **ORM**: SQLAlchemy 2.0 (async)
 - **Testing**: pytest + pytest-asyncio
 - **Logging**: Python logging + rotation
@@ -277,6 +297,16 @@ sudo make service-start
 ```
 
 Detailed deployment guide in [DEPLOY.md](DEPLOY.md)
+
+### Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t anon-questions-bot .
+
+# Run container
+docker-compose up -d
+```
 
 ## 🔧 Configuration
 
