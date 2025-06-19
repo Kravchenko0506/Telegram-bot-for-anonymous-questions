@@ -138,12 +138,16 @@ def get_admin_panel_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="⏳ Неотвеченные", callback_data="admin:pending"),
-                InlineKeyboardButton(text="⭐ Избранные", callback_data="admin:favorites")
+                InlineKeyboardButton(text="⏳ Неотвеченные",
+                                     callback_data="admin:pending"),
+                InlineKeyboardButton(text="⭐ Избранные",
+                                     callback_data="admin:favorites")
             ],
             [
-                InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats"),
-                InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin:settings")
+                InlineKeyboardButton(text="📊 Статистика",
+                                     callback_data="admin:stats"),
+                InlineKeyboardButton(text="⚙️ Настройки",
+                                     callback_data="admin:settings")
             ]
         ]
     )

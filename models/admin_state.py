@@ -24,9 +24,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 from models.database import Base, async_session
-from utils.logger import get_admin_logger
+from utils.logging_setup import get_logger
 
-logger = get_admin_logger()
+logger = get_logger(__name__)
 
 
 class AdminState(Base):
@@ -57,7 +57,8 @@ class AdminState(Base):
     # Timestamps с timezone=True
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(),
+                        onupdate=func.now(), nullable=False)
 
     def __repr__(self) -> str:
         return f"<AdminState(admin_id={self.admin_id}, type='{self.state_type}', expires={self.expires_at})>"

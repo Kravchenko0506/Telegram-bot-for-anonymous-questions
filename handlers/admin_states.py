@@ -30,10 +30,10 @@ from datetime import datetime, timedelta
 from config import ADMIN_ID, USER_ANSWER_RECEIVED
 from models.database import async_session
 from models.questions import Question
-from utils.logger import get_admin_logger
+from utils.logging_setup import get_logger
 
 router = Router()
-logger = get_admin_logger()
+logger = get_logger(__name__)
 
 # Storage for admin states with timestamp for cleanup
 admin_answer_states = {}

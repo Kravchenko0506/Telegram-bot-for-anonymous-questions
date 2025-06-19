@@ -45,9 +45,9 @@ from sqlalchemy.exc import (
 )
 
 from config import ADMIN_ID, ERROR_DATABASE, SENTRY_DSN
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 # Import Sentry if configured
 if SENTRY_DSN:

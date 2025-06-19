@@ -35,35 +35,11 @@ from models.database import init_db, close_db, check_db_connection
 from handlers import start, questions, admin, admin_states
 from middlewares.rate_limit import RateLimitMiddleware, CallbackRateLimitMiddleware
 from middlewares.error_handler import ErrorHandlerMiddleware
-from utils.logger import get_bot_logger
+from utils.logging_setup import setup_logging, get_logger, capture_error
 from utils.periodic_tasks import start_periodic_tasks, stop_periodic_tasks
 
-# Initialize Sentry if configured
-if SENTRY_DSN:
-    try:
-        import sentry_sdk
-        from sentry_sdk.integrations.asyncio import AsyncioIntegration
-        from sentry_sdk.integrations.logging import LoggingIntegration
-
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            integrations=[
-                AsyncioIntegration(),
-                LoggingIntegration(
-                    level=logging.INFO,
-                    event_level=logging.ERROR
-                ),
-            ],
-            traces_sample_rate=0.1,
-            environment="production"
-        )
-        logger = get_bot_logger()
-        logger.info("Sentry error tracking initialized")
-    except ImportError:
-        logger = get_bot_logger()
-        logger.warning("Sentry SDK not installed, skipping error tracking")
-else:
-    logger = get_bot_logger()
+setup_logging()
+logger = get_logger(__name__)
 
 
 async def setup_bot() -> tuple[Bot, Dispatcher]:
@@ -211,7 +187,7 @@ async def on_startup(bot: Bot) -> None:
     bot_info = await bot.get_me()
     logger.info(f"Bot started: @{bot_info.username}")
 
-    # Notify admin 
+    # Notify admin
     """
     try:
         await bot.send_message(
@@ -242,7 +218,7 @@ async def on_shutdown(bot: Bot) -> None:
     # Stop periodic tasks
     await stop_periodic_tasks()
 
-    # Notify admin 
+    # Notify admin
     """
     try:
         await bot.send_message(ADMIN_ID, "⚠️ Бот остановлен")
@@ -302,6 +278,7 @@ async def main() -> None:
 
     except Exception as e:
         logger.error(f"Critical error: {e}")
+        capture_error(e, {"phase": "main_application"})
         raise
 
     finally:
@@ -319,22 +296,9 @@ if __name__ == "__main__":
 
     Sets up proper logging and runs the main coroutine.
     """
-    # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('logs/bot.log', encoding='utf-8')
-        ]
-    )
-
-    # Suppress noisy loggers
-    logging.getLogger('aiogram').setLevel(logging.WARNING)
-    logging.getLogger('asyncio').setLevel(logging.WARNING)
 
     print("🚀 Starting bot...")
-    print("📁 Logs: console + bot.log file")
+    print("📁 Logs: console + persistent log files")
     print("🔒 Security features enabled")
 
     try:

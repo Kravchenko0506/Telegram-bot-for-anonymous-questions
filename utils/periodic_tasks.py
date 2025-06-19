@@ -23,9 +23,9 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 
 class PeriodicTaskManager:
@@ -66,7 +66,7 @@ class PeriodicTaskManager:
             return
 
         self.running = True
-        logger.info("Starting periodic tasks...")
+        logger.debug("Starting periodic tasks...")
 
         # Start individual tasks
         self.tasks.append(
@@ -76,7 +76,7 @@ class PeriodicTaskManager:
             asyncio.create_task(self._database_health_check())
         )
 
-        logger.info(f"Started {len(self.tasks)} periodic tasks")
+        logger.debug(f"Started {len(self.tasks)} periodic tasks")
 
     async def stop(self):
         """
@@ -93,7 +93,7 @@ class PeriodicTaskManager:
             return
 
         self.running = False
-        logger.info("Stopping periodic tasks...")
+        logger.debug("Stopping periodic tasks...")
 
         # Cancel all tasks
         for task in self.tasks:
@@ -103,7 +103,7 @@ class PeriodicTaskManager:
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.tasks.clear()
 
-        logger.info("All periodic tasks stopped")
+        logger.debug("All periodic tasks stopped")
 
     async def _cleanup_expired_states(self):
         """
@@ -130,7 +130,7 @@ class PeriodicTaskManager:
                 cleaned_count = await AdminStateManager.cleanup_expired_states()
 
                 if cleaned_count > 0:
-                    logger.info(
+                    logger.debug(
                         f"Cleaned up {cleaned_count} expired admin states")
                 else:
                     logger.debug("No expired admin states found")

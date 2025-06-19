@@ -28,10 +28,10 @@ from aiogram.filters import CommandStart
 from aiogram.filters.command import CommandObject
 
 from config import ADMIN_ID, WELCOME_MESSAGE_TEMPLATE, MAX_QUESTION_LENGTH, BOT_USERNAME
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
 router = Router()
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 
 @router.message(CommandStart())

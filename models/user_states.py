@@ -29,9 +29,9 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from models.database import Base, async_session
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 
 class UserState(Base):
@@ -86,8 +86,8 @@ class UserState(Base):
 
     # Timestamps
     created_at = Column(
-        DateTime,  
-        server_default=func.now(), 
+        DateTime,
+        server_default=func.now(),
         nullable=False)
     """
     Account creation timestamp.
@@ -99,7 +99,7 @@ class UserState(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
-)
+    )
     """
     Last activity timestamp.
     Automatically updated on state changes.

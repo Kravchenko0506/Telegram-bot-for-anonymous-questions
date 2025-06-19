@@ -35,9 +35,9 @@ from config import (
     ERROR_RATE_LIMIT,
     ADMIN_ID
 )
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 
 class RateLimitMiddleware(BaseMiddleware):

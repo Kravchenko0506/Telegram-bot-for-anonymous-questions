@@ -51,7 +51,7 @@ from keyboards.inline import (
     get_clear_confirmation_keyboard,
     get_pagination_keyboard
 )
-from utils.logger import get_admin_logger
+from utils.logging_setup import get_logger
 from handlers.admin_states import (
     start_answer_mode,
     cancel_answer_mode,
@@ -61,7 +61,7 @@ from handlers.admin_states import (
 from models.settings import SettingsManager
 
 router = Router()
-logger = get_admin_logger()
+logger = get_logger(__name__)
 
 # Constants for pagination
 QUESTIONS_PER_PAGE = 10

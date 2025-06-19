@@ -19,10 +19,10 @@ from aiogram.filters import Command
 
 from config import ADMIN_ID, ERROR_ADMIN_ONLY
 from models.settings import SettingsManager
-from utils.logger import get_admin_logger
+from utils.logging_setup import get_logger
 
 router = Router()
-logger = get_admin_logger()
+logger = get_logger(__name__)
 
 
 @router.message(Command("limits"))

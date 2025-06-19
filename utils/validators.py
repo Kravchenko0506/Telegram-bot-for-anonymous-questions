@@ -27,9 +27,9 @@ import html
 from typing import Optional, Tuple, Dict
 
 from config import MAX_QUESTION_LENGTH, MAX_ANSWER_LENGTH
-from utils.logger import get_bot_logger
+from utils.logging_setup import get_logger
 
-logger = get_bot_logger()
+logger = get_logger(__name__)
 
 
 class InputValidator:

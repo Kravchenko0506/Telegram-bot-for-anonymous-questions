@@ -48,11 +48,11 @@ from keyboards.inline import (
     get_user_question_sent_keyboard,
     get_user_blocked_keyboard
 )
-from utils.logger import get_question_logger
+from utils.logging_setup import get_logger
 from sqlalchemy import select
 
 router = Router()
-logger = get_question_logger()
+logger = get_logger(__name__)
 
 
 @router.callback_query()
