@@ -134,7 +134,7 @@ MAX_QUESTION_LENGTH: int = get_env_int(
 """Maximum length of a question in characters"""
 
 MAX_ANSWER_LENGTH: int = get_env_int(
-    "MAX_ANSWER_LENGTH", default=5000, required=False)
+    "MAX_ANSWER_LENGTH", default=6000, required=False)
 """Maximum length of an answer in characters"""
 
 # Logging Configuration
