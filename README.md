@@ -12,6 +12,8 @@ A Telegram bot for anonymous questions with advanced admin features
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Testing](#-testing) 
 
+[🇷🇺 Russian version (Русская версия)](README_RUS.md)
+
 </div>
 
 ## 📋 Description
@@ -47,7 +49,7 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 - 🔒 **Security** — protection from SQL injection, XSS, spam
 - 📈 **Scalability** — connection pooling, optimized queries
 - 🛡️ **Fault tolerance** — automatic connection recovery
-- 📝 **Logging** — detailed logs with rotation
+- 📝 **Logging** — advanced system with file rotation, colored formatting and Sentry integration
 - 🧪 **Testing** — test coverage >70%
 
 ## 🚀 Installation
@@ -310,6 +312,8 @@ docker-compose up -d
 
 ## 🔧 Configuration
 
+Detailed documentation for all configuration parameters is available in [CONFIG_PARAMS_EN.md](CONFIG_PARAMS_EN.md).
+
 ### Main Parameters
 
 | Parameter | Default | Description |
@@ -318,13 +322,21 @@ docker-compose up -d
 | `MAX_ANSWER_LENGTH` | 5000 | Maximum answer length |
 | `RATE_LIMIT_QUESTIONS_PER_HOUR` | 5 | Questions per hour limit |
 
-
 ### Logging
 
-Logs are saved in the `logs/` directory:
-- `bot.log` — main bot log
-- `admin.log` — admin actions
-- `question.log` — question processing
+The logging system uses `utils/logging_setup.py` module and provides:
+- 🎨 **Colored formatting** — enhanced readability in console
+- 📂 **File rotation** — automatic management of log file size and count
+- 🔍 **Flexible level configuration** — different logging levels for different components
+- 📊 **Sentry integration** — error tracking and performance monitoring
+
+Component logging levels (in normal mode):
+- **handlers**: DEBUG — detailed logging of handlers
+- **models**: WARNING — only important events for data models
+- **middlewares**: INFO — medium level for middleware
+- **utils**: INFO — medium level for utilities
+- **periodic_tasks**: ERROR — only errors for periodic tasks
+- **handlers.admin**: INFO — informational level for admin functions
 
 ## 🛡️ Security
 
@@ -334,8 +346,6 @@ Logs are saved in the `logs/` directory:
 - ⏱️ Rate limiting for spam protection
 - 🔍 All input data validation
 - 📝 Suspicious activity logging
-
-
 
 ## 📄 License
 
@@ -356,7 +366,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <div align="center">
 
 **[⬆ Back to top](#-anonymous-questions-bot)**
-
-
 
 </div>
