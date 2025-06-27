@@ -12,6 +12,7 @@ Comprehensive logging setup with:
 import logging
 import logging.handlers
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +29,7 @@ from config import (
     DEBUG_MODE, VERBOSE_DATABASE_LOGS
 )
 
+os.environ['TZ'] = 'Europe/Moscow'
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter with color support for console output"""
@@ -171,7 +173,8 @@ def configure_logger_levels() -> None:
 
     # Third-party libraries
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
-    logging.getLogger("aiogram").setLevel(logging.INFO)
+    logging.getLogger("aiogram").setLevel(logging.WARNING)
+    logging.getLogger("aiogram.dispatcher").setLevel(logging.ERROR)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     # SQLAlchemy

@@ -271,7 +271,7 @@ async def main() -> None:
         # Start bot polling
         logger.info("Bot is starting polling...")
 
-        await dp.start_polling(bot)
+        await dp.start_polling(bot, timeout=20)
 
     except KeyboardInterrupt:
         logger.info("Bot stopped by user (Ctrl+C)")

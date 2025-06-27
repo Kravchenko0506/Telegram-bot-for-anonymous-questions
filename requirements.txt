@@ -1,6 +1,6 @@
 # Core dependencies
 aiogram==3.4.1
-sentry-sdk[sqlalchemy]==1.40.6
+sentry-sdk[sqlalchemy]==2.32.0
 asyncio-throttle==1.0.2
 
 # Database
@@ -10,18 +10,8 @@ sqlalchemy[asyncio]==2.0.25
 # Environment variables
 python-dotenv==1.0.0
 
-# Development and testing dependencies
-pytest==8.2.2
-pytest-asyncio==0.23.7
-pytest-cov==5.0.0
-pytest-mock==3.14.0
 
-# Code quality tools
-flake8==7.1.0
-mypy==1.10.1
-isort==5.13.2
-black==24.4.2
 
-# Note: This project requires Python 3.10 or higher
+
 
 
