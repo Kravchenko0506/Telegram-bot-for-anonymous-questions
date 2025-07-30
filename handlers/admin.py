@@ -55,8 +55,7 @@ from utils.logging_setup import get_logger
 from handlers.admin_states import (
     start_answer_mode,
     cancel_answer_mode,
-    handle_admin_answer,
-    is_admin_in_answer_mode
+
 )
 from models.settings import SettingsManager
 
@@ -148,8 +147,9 @@ async def admin_question_callback(callback: CallbackQuery):
                 return
 
             if action == "answer":
-                # Start interactive answer mode
-                await start_answer_mode(callback, question_id)
+                # Start interactive answer mode, passing the question object
+                # to avoid creating another database session
+                await start_answer_mode(callback, question_id, question)
 
             elif action == "favorite":
                 question.is_favorite = not question.is_favorite
