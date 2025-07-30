@@ -138,12 +138,13 @@ MAX_ANSWER_LENGTH: int = get_env_int(
 """Maximum length of an answer in characters"""
 
 # Logging Configuration
-LOG_LEVEL: str = get_env_var("LOG_LEVEL", default="INFO", required=False).upper()
+LOG_LEVEL: str = get_env_var(
+    "LOG_LEVEL", default="INFO", required=False).upper()
 """Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL"""
 
 LOG_FORMAT: str = get_env_var(
-    "LOG_FORMAT", 
-    default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
+    "LOG_FORMAT",
+    default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     required=False
 )
 """Custom log format string"""
@@ -211,7 +212,8 @@ VERBOSE_DATABASE_LOGS: bool = get_env_var(
 # Validate log level
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 if LOG_LEVEL not in VALID_LOG_LEVELS:
-    raise ValueError(f"Invalid LOG_LEVEL '{LOG_LEVEL}'. Must be one of: {VALID_LOG_LEVELS}")
+    raise ValueError(
+        f"Invalid LOG_LEVEL '{LOG_LEVEL}'. Must be one of: {VALID_LOG_LEVELS}")
 
 # Validate Sentry sample rates
 if not 0.0 <= SENTRY_SAMPLE_RATE <= 1.0:
@@ -359,3 +361,20 @@ if __name__ != "__main__":
         print("\n📋 Please check your .env file and ensure all required variables are set.")
         print("See .env.example for reference.")
         raise
+
+
+# NETWORK CONFIGURATION FOR STABLE TELEGRAM CONNECTION
+
+# Network timeouts (seconds)
+POLLING_TIMEOUT = 300           # How long to wait for new messages
+REQUEST_TIMEOUT = 120            # Individual request timeout
+CONNECT_TIMEOUT = 60            # Connection establishment timeout
+READ_TIMEOUT = 120               # Socket read timeout
+
+# Retry settings
+MAX_POLLING_RETRIES = 8         # Max reconnection attempts
+RETRY_DELAY_BASE = 60           # Base delay between retries (seconds)
+MAX_RETRY_DELAY = 600           # Maximum delay between retries (seconds)
+
+# Allowed update types (reduces bandwidth)
+ALLOWED_UPDATES = ["message", "callback_query"]
