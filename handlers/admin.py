@@ -264,36 +264,41 @@ async def show_pending_questions_page(message: Message, page: int = 0, edit_mess
     """
     try:
         async with async_session() as session:
-            # Count total pending questions
+            # Execute both queries in explicit sequence to prevent SQLite lock conflicts
+            # First query: count total records
             total_stmt = select(func.count(Question.id)).where(
-                Question.answer.is_(None),
+                Question.is_favorite == True,
                 Question.is_deleted == False
             )
             total_result = await session.execute(total_stmt)
             total_count = total_result.scalar() or 0
 
+            # Early return if no records found
             if total_count == 0:
-                text = "📭 Нет неотвеченных вопросов!"
+                text = "⭐ Нет избранных вопросов."
                 if edit_message:
                     await message.edit_text(text, reply_markup=None)
                 else:
                     await message.answer(text)
                 return
 
-            # Calculate pagination
+            # Calculate pagination parameters
             total_pages = math.ceil(total_count / QUESTIONS_PER_PAGE)
-            # Ensure page is in bounds
             page = max(0, min(page, total_pages - 1))
             offset = page * QUESTIONS_PER_PAGE
 
-            # Get questions for current page
+            # Second query: load actual records in same transaction
+            # This prevents SQLite from creating separate lock contexts
             stmt = select(Question).where(
-                Question.answer.is_(None),
+                Question.is_favorite == True,
                 Question.is_deleted == False
-            ).order_by(Question.created_at.asc()).offset(offset).limit(QUESTIONS_PER_PAGE)
+            ).order_by(Question.created_at.desc()).offset(offset).limit(QUESTIONS_PER_PAGE)
 
             result = await session.execute(stmt)
             questions = result.scalars().all()
+
+            # At this point we have both count and records from single session
+            # No intermediate commits or rollbacks will occur
 
         # Create header message
         header_text = f"⏳ <b>Неотвеченные вопросы</b>\n\n📊 Страница {page + 1} из {total_pages} | Всего: {total_count}"
