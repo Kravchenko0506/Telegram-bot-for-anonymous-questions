@@ -40,7 +40,7 @@ from config import (
     SUCCESS_SETTING_UPDATED,
     ERROR_SETTING_UPDATE,
     ERROR_INVALID_VALUE,
-    BOT_USERNAME
+    BOT_USERNAME, QUESTIONS_PER_PAGE
 )
 from models.database import async_session
 from models.questions import Question
@@ -63,7 +63,6 @@ router = Router()
 logger = get_logger(__name__)
 
 # Constants for pagination
-QUESTIONS_PER_PAGE = 10
 MAX_PAGES_TO_SHOW = 10
 
 
@@ -334,6 +333,15 @@ async def show_pending_questions_page(message: Message, page: int = 0, edit_mess
         logger.info(
             f"Admin viewed pending questions page {page + 1}/{total_pages} ({len(questions)} questions)")
 
+        # Add bottom navigation for better UX
+        if total_pages > 1:
+            bottom_nav_text = f"📄 Навигация по страницам ({page + 1}/{total_pages})"
+            bottom_keyboard = get_pagination_keyboard(page, total_pages, "pending_page")
+            await message.answer(bottom_nav_text, reply_markup=bottom_keyboard)
+
+        logger.info(
+            f"Admin viewed pending questions page {page + 1}/{total_pages} ({len(questions)} questions)")
+
     except Exception as e:
         error_text = "❌ Ошибка при получении неотвеченных вопросов"
         if edit_message:
@@ -434,6 +442,15 @@ async def show_favorites_page(message: Message, page: int = 0, edit_message: boo
 
             keyboard = get_favorite_question_keyboard(question.id)
             await message.answer(question_text, reply_markup=keyboard)
+
+        logger.info(
+            f"Admin viewed favorites page {page + 1}/{total_pages} ({len(questions)} questions)")
+
+# Add bottom navigation for better UX - users don't need to scroll back up
+        if total_pages > 1:
+            bottom_nav_text = f"📄 Навигация по страницам ({page + 1}/{total_pages})"
+            bottom_keyboard = get_pagination_keyboard(page, total_pages, "favorites_page")
+            await message.answer(bottom_nav_text, reply_markup=bottom_keyboard)
 
         logger.info(
             f"Admin viewed favorites page {page + 1}/{total_pages} ({len(questions)} questions)")
@@ -893,14 +910,6 @@ async def settings_command(message: Message):
 
 def get_questions_per_page() -> int:
     """
-    Get questions per page setting.
-
-    This function:
-    - Returns page size
-    - Handles configuration
-    - Provides defaults
-
-    Returns:
-        int: Questions per page
+    Get questions per page setting from config.
     """
     return QUESTIONS_PER_PAGE
