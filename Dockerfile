@@ -12,7 +12,9 @@ RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
 COPY . .
 
 
-RUN mkdir -p /data
+RUN mkdir -p /data/backups && \
+    chmod 755 /data && \
+    chmod 755 /data/backups
 
 
 RUN chmod 755 /data

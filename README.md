@@ -42,7 +42,8 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 - ⭐ **Favorites** — save important questions
 - ⚙️ **Settings** — change author name and channel description
 - 🔍 **Filtering** — separate lists for unanswered and favorite questions
-- 🚨 **Monitoring** — Sentry integration for error tracking
+- � **Backup System** — automated backups with Telegram delivery
+- �🚨 **Monitoring** — Sentry integration for error tracking
 
 ### Technical Features
 - 🚀 **Performance** — asynchronous request processing
@@ -50,6 +51,7 @@ Anonymous Questions Bot is a solution for organizing anonymous feedback in Teleg
 - 📈 **Scalability** — connection pooling, optimized queries
 - 🛡️ **Fault tolerance** — automatic connection recovery
 - 📝 **Logging** — advanced system with file rotation, colored formatting and Sentry integration
+- 💾 **Backup System** — SQLite backup() method with ZIP compression and Telegram delivery
 - 🧪 **Testing** — test coverage >70%
 
 ## 🚀 Installation
@@ -105,6 +107,10 @@ BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz  # Token from @BotFather
 ADMIN_ID=123456789                              # Your Telegram ID
 BOT_USERNAME=your_bot_username                  # Bot username without @
 
+# Backup System (NEW)
+BACKUP_ENABLED=true                             # Enable backup system
+BACKUP_RECIPIENT_ID=987654321                   # Telegram user ID for backups
+
 # Optional parameters
 LOG_LEVEL=INFO                      # DEBUG, INFO, WARNING, ERROR
 MAX_QUESTION_LENGTH=2500            # Maximum question length
@@ -147,6 +153,9 @@ SENTRY_DSN=                         # For error monitoring (optional)
 | `/settings` | Current settings |
 | `/set_author` | Change author name |
 | `/set_info` | Change channel description |
+| `/backup` | Create and send backup to configured recipient |
+| `/backup_me` | Create and send backup to current admin |
+| `/backup_info` | Backup system information |
 
 #### Managing Questions
 

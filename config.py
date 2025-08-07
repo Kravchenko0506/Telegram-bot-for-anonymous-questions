@@ -378,3 +378,25 @@ MAX_RETRY_DELAY = 600           # Maximum delay between retries (seconds)
 
 # Allowed update types (reduces bandwidth)
 ALLOWED_UPDATES = ["message", "callback_query"]
+
+
+# =============================================================================
+# TELEGRAM BACKUP CONFIGURATION
+# =============================================================================
+
+# Backup system settings
+BACKUP_ENABLED: bool = get_env_var(
+    "BACKUP_ENABLED", default="true", required=False).lower() == "true"
+"""Enable automatic backup system"""
+
+BACKUP_RECIPIENT_ID: int = get_env_int(
+    "BACKUP_RECIPIENT_ID", required=True)
+"""Telegram user ID to receive backup files (MUST be set in .env file)"""
+
+BACKUP_KEEP_LOCAL_COUNT: int = get_env_int(
+    "BACKUP_KEEP_LOCAL_COUNT", default=3, required=False)
+"""Number of local backup files to keep for cleanup"""
+
+BACKUP_STORAGE_DIR: str = get_env_var(
+    "BACKUP_STORAGE_DIR", default="./data/backups", required=False)
+"""Directory for temporary local backup storage"""

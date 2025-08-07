@@ -109,6 +109,10 @@ async def setup_bot_menu(bot: Bot) -> None:
             BotCommand(command="pending",
                        description="⏳ Неотвеченные вопросы"),
             BotCommand(command="favorites", description="⭐ Избранные"),
+            BotCommand(command="backup",
+                       description="💾 Создать резервную копию"),
+            BotCommand(command="backup_info",
+                       description="📦 Информация о бекапах"),
         ]
 
         # Set commands for all users (only /start)
@@ -360,9 +364,6 @@ if __name__ == "__main__":
     """
 
     print("🚀 Starting Anonymous Questions Bot...")
-    print("📁 Logs: console + persistent log files")
-    print("🔒 Security features enabled")
-    print("🌐 Network: robust connection with auto-retry")
 
     try:
         asyncio.run(main())

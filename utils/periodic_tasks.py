@@ -76,6 +76,16 @@ class PeriodicTaskManager:
             asyncio.create_task(self._database_health_check())
         )
 
+        # Start backup scheduler if enabled
+        from config import BACKUP_ENABLED, BACKUP_RECIPIENT_ID
+        if BACKUP_ENABLED and BACKUP_RECIPIENT_ID:
+            from utils.telegram_backup import backup_scheduler_task
+            self.tasks.append(
+                asyncio.create_task(backup_scheduler_task(BACKUP_RECIPIENT_ID))
+            )
+            logger.info(
+                f"📦 Telegram backup scheduler enabled for user {BACKUP_RECIPIENT_ID}")
+
         logger.debug(f"Started {len(self.tasks)} periodic tasks")
 
     async def stop(self):
