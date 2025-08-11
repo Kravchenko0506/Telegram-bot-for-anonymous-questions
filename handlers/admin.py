@@ -151,10 +151,7 @@ async def admin_question_callback(callback: CallbackQuery) -> None:  # noqa: C90
             return
 
         if action == "cancel_answer":
-            try:
-                await cancel_answer_mode(callback.message)
-            except TypeError:
-                await cancel_answer_mode(callback)
+            await cancel_answer_mode(callback)
             return
         if not await handle_question_action(callback, action, qid):
             await callback.answer("❌ Неизвестное действие", show_alert=True)

@@ -31,17 +31,13 @@ import re
 from config import (
     ADMIN_ID,
     MAX_QUESTION_LENGTH,
-    ERROR_MESSAGE_TOO_LONG,
     ERROR_MESSAGE_EMPTY,
-    SUCCESS_QUESTION_SENT,
-    ADMIN_NEW_QUESTION,
     ERROR_DATABASE,
     USER_ANSWER_RECEIVED
 )
 from models.database import async_session
 from models.questions import Question
 from models.user_states import UserStateManager
-from models.admin_state import AdminStateManager
 from utils.validators import InputValidator, ContentModerator
 from keyboards.inline import (
     get_admin_question_keyboard,

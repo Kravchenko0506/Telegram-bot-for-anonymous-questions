@@ -1,28 +1,4 @@
-"""
-Admin State Management System
-
-A comprehensive system for managing admin interaction states and answer flow
-in the Anonymous Questions Bot. This system provides reliable state persistence
-with automatic cleanup and error recovery.
-
-Features:
-- Answer mode management
-- State persistence
-- Automatic cleanup
-- Error handling
-- User notifications
-- State validation
-- Activity tracking
-
-Technical Features:
-- PostgreSQL integration
-- Automatic expiration
-- Memory optimization
-- Error recovery
-- State validation
-- Logging integration
-"""
-
+"""Admin state management for answering questions."""
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from datetime import datetime, timedelta
@@ -31,353 +7,185 @@ from config import ADMIN_ID, USER_ANSWER_RECEIVED
 from models.database import async_session
 from models.questions import Question
 from utils.logging_setup import get_logger
+from models.user_states import UserStateManager
+from keyboards.inline import get_cancel_answer_keyboard, get_user_question_sent_keyboard
 
 router = Router()
 logger = get_logger(__name__)
 
-# Storage for admin states with timestamp for cleanup
+# In-memory storage for admin answer states
 admin_answer_states = {}
 
+def preview_text(text: str, max_len: int = 100) -> str:
+    """Truncate text for preview."""
+    return text if len(text) <= max_len else text[:max_len] + "..."
 
 def cleanup_expired_states():
-    """
-    Clean up expired admin states to prevent memory leaks.
+    """Remove states older than 30 minutes."""
+    cutoff = datetime.utcnow() - timedelta(minutes=30)
+    expired = [
+        admin_id for admin_id, state in admin_answer_states.items()
+        if state.get('created_at', cutoff) < cutoff
+    ]
+    
+    for admin_id in expired:
+        admin_answer_states.pop(admin_id, None)
+        logger.warning(f"Cleaned expired state for admin {admin_id}")
 
-    This function:
-    - Checks state timestamps
-    - Removes expired states
-    - Logs cleanup actions
-    - Maintains memory usage
-
-    Technical Details:
-    - 30-minute expiration
-    - Automatic cleanup
-    - Memory optimization
-    - Activity logging
-    """
-    current_time = datetime.utcnow()
-    expired_admins = []
-
-    for admin_id, state in admin_answer_states.items():
-        if 'created_at' in state:
-            time_diff = current_time - state['created_at']
-            if time_diff > timedelta(minutes=30):
-                expired_admins.append(admin_id)
-                logger.warning(
-                    f"Cleaning up expired state for admin {admin_id}")
-
-    for admin_id in expired_admins:
-        del admin_answer_states[admin_id]
-
+def is_admin_answering(admin_id: int) -> bool:
+    """Check if admin is currently answering."""
+    cleanup_expired_states()
+    state = admin_answer_states.get(admin_id)
+    return state and state.get('mode') == 'waiting_answer'
 
 async def start_answer_mode(callback: CallbackQuery, question_id: int, question=None):
-    """
-    Initialize interactive answer mode for admin.
-
-    This function:
-    - Validates question status
-    - Sets up answer state
-    - Sends answer interface
-    - Handles errors
-    - Accepts an optional question object to prevent
-    creating multiple database sessions for the same operation.
-
-    Features:
-    - Question validation
-    - State initialization
-    - Error handling
-    - User interface
-    - Activity logging
-
-    Flow:
-    1. Clean expired states
-    2. Validate question
-    3. Initialize answer state
-    4. Show answer interface
-    5. Handle errors
-
-    Args:
-        callback: Telegram callback query
-        question_id: Question identifier
-        question: Optional Question object from existing session
-    """
+    """Enter answer mode for a question."""
     admin_id = callback.from_user.id
+    cleanup_expired_states()
 
     try:
-        # Clean up any expired states
-        cleanup_expired_states()
-
-        # If question object not provided, get it from database
-        if question is None:
+        # Fetch question if not provided
+        if not question:
             async with async_session() as session:
                 question = await session.get(Question, question_id)
-                if not question or question.is_deleted:
-                    await callback.answer("❌ Вопрос не найден", show_alert=True)
-                    return
+        
+        if not question or question.is_deleted:
+            await callback.answer("❌ Вопрос не найден", show_alert=True)
+            return
+            
+        if question.is_answered:
+            await callback.answer("❌ Уже отвечен", show_alert=True)
+            return
 
-                if question.is_answered:
-                    await callback.answer("❌ На этот вопрос уже дан ответ", show_alert=True)
-                    return
-        else:
-            # Use provided question object - no database query needed
-            if question.is_deleted:
-                await callback.answer("❌ Вопрос не найден", show_alert=True)
-                return
-
-            if question.is_answered:
-                await callback.answer("❌ На этот вопрос уже дан ответ", show_alert=True)
-                return
-
-        # Clear any existing state for this admin
-        if admin_id in admin_answer_states:
-            logger.warning(
-                f"Admin {admin_id} already in answer mode, clearing previous state")
-            del admin_answer_states[admin_id]
-
-        # Set admin state with timestamp
-        # Store only plain primitives; guard against unexpected None text
-        q_text = question.text if isinstance(question.text, str) else ""
+        # Set answer state
         admin_answer_states[admin_id] = {
             'question_id': question_id,
-            'question_text': q_text,
+            'question_text': question.text or "",
             'user_id': question.user_id,
             'mode': 'waiting_answer',
             'created_at': datetime.utcnow()
         }
 
-        # Send answer prompt
-        answer_text = f"""💬 <b>Режим ответа на вопрос #{question_id}</b>
-
-<b>Вопрос:</b>
-<i>{question.text}</i>
-
-📝 <b>Напишите ваш ответ:</b>
-
-<i>⏰ Режим ответа автоматически отключится через 30 минут</i>"""
-
-        from keyboards.inline import get_cancel_answer_keyboard
-        keyboard = get_cancel_answer_keyboard(question_id)
-
+        # Show answer interface
         await callback.message.reply(
-            text=answer_text,
-            reply_markup=keyboard
+            f"💬 <b>Ответ на вопрос #{question_id}</b>\n\n"
+            f"<b>Вопрос:</b>\n<i>{question.text}</i>\n\n"
+            "📝 <b>Напишите ответ:</b>\n"
+            "<i>⏰ Режим ответа отключится через 30 минут</i>",
+            reply_markup=get_cancel_answer_keyboard(question_id)
         )
-
-        await callback.answer("💡 Введите ваш ответ в следующем сообщении")
-        logger.info(
-            f"Admin {admin_id} started answer mode for question {question_id}")
+        await callback.answer("💡 Введите ответ в следующем сообщении")
+        logger.info(f"Admin {admin_id} answering question {question_id}")
 
     except Exception as e:
-        # Clean up state on error
-        if admin_id in admin_answer_states:
-            del admin_answer_states[admin_id]
-        await callback.answer("❌ Ошибка при переходе в режим ответа", show_alert=True)
-        logger.error(f"Error starting answer mode: {e}")
-
+        admin_answer_states.pop(admin_id, None)
+        await callback.answer("❌ Ошибка входа в режим ответа", show_alert=True)
+        logger.error(f"Start answer error: {e}")
 
 async def handle_admin_answer(message: Message):
-    """
-    Process admin's answer in answer mode.
-
-    This function:
-    - Validates answer state
-    - Saves answer
-    - Notifies user
-    - Handles errors
-
-    Features:
-    - State validation
-    - Answer persistence
-    - User notification
-    - Error handling
-    - Activity logging
-
-    Flow:
-    1. Validate state
-    2. Process answer
-    3. Save to database
-    4. Notify user
-    5. Handle errors
-
-    Args:
-        message: Admin's answer message
-
-    Returns:
-        bool: True if message was handled as answer
-    """
+    """Process admin's answer to a question."""
     admin_id = message.from_user.id
-
-    # Clean up expired states first
     cleanup_expired_states()
-
-    if admin_id not in admin_answer_states:
-        logger.warning(f"Admin {admin_id} not in answer mode")
-        return False
-
-    state = admin_answer_states[admin_id]
-
-    if state['mode'] != 'waiting_answer':
-        logger.warning(f"Admin {admin_id} in wrong mode: {state['mode']}")
-        # Clean up bad state
-        del admin_answer_states[admin_id]
+    
+    state = admin_answer_states.get(admin_id)
+    if not state or state.get('mode') != 'waiting_answer':
+        admin_answer_states.pop(admin_id, None)
         return False
 
     answer_text = message.text.strip()
-    question_id = state.get('question_id')
-    user_id = state.get('user_id')
-    question_text = state.get('question_text') or ""
-    if question_id is None or user_id is None:
-        logger.error(f"Corrupted admin answer state: {state}")
-        return True
-
     if not answer_text:
-        await message.answer("❌ Ответ не может быть пустым. Попробуйте еще раз.")
+        await message.answer("❌ Ответ не может быть пустым")
         return True
 
-    # Immediately clear admin state to prevent double processing
+    # Extract state data
+    question_id = state['question_id']
+    user_id = state['user_id']
+    question_text = state['question_text']
+    
+    # Clear state immediately
     del admin_answer_states[admin_id]
-    logger.info(f"Admin {admin_id} state cleared for question {question_id}")
-
+    
     try:
-        # Save answer to database
+        # Save answer to DB
         async with async_session() as session:
             question = await session.get(Question, question_id)
-            if not question:
-                await message.answer("❌ Вопрос не найден")
+            if not question or question.is_answered:
+                await message.answer("❌ Вопрос недоступен")
                 return True
-
-            if question.is_answered:
-                await message.answer("❌ На этот вопрос уже был дан ответ")
-                return True
-
+                
             question.answer = answer_text
             question.answered_at = datetime.utcnow()
             await session.commit()
 
-            logger.info(f"Answer saved for question {question_id}")
-
-        # Try to send answer to user
-        try:
-            from keyboards.inline import get_user_question_sent_keyboard
-            from models.user_states import UserStateManager
-            keyboard = get_user_question_sent_keyboard()
-
-            user_message_with_button = (
-                USER_ANSWER_RECEIVED.format(
-                    question=question_text,
-                    answer=answer_text
-                ) + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
-            )
-
-            await message.bot.send_message(
-                chat_id=user_id,
-                text=user_message_with_button,
-                reply_markup=keyboard
-            )
-
-            # Set user state
-            await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
-
-            # Success confirmation
-            def _preview(s: str) -> str:
-                s = s or ""
-                return s if len(s) <= 100 else s[:100] + "..."
-
-            confirmation_text = (
-                "✅ <b>Ответ успешно отправлен!</b>\n\n"
-                f"<b>Вопрос:</b> {_preview(question_text)}\n"
-                f"<b>Ваш ответ:</b> {_preview(answer_text)}\n\n"
-                "<i>Ответ доставлен пользователю анонимно</i>"
-            )
-
-            await message.answer(confirmation_text)
-            logger.info(f"Answer sent successfully for question {question_id}")
-
-        except Exception as e:
-            logger.error(f"Failed to send answer to user {user_id}: {e}")
-
-            def _preview(s: str) -> str:
-                s = s or ""
-                return s if len(s) <= 100 else s[:100] + "..."
-            await message.answer(
-                "✅ <b>Ответ сохранен!</b>\n\n"
-                f"<b>Вопрос:</b> {_preview(question_text)}\n"
-                f"<b>Ваш ответ:</b> {_preview(answer_text)}\n\n"
-                "⚠️ Не удалось отправить пользователю (возможно, заблокировал бота)."
-            )
-
+        # Notify user
+        await _notify_user_with_answer(message, user_id, question_text, answer_text)
+        
+        # Confirm to admin
+        await message.answer(
+            "✅ <b>Ответ отправлен!</b>\n\n"
+            f"<b>Вопрос:</b> {preview_text(question_text)}\n"
+            f"<b>Ответ:</b> {preview_text(answer_text)}\n\n"
+            "<i>Доставлено анонимно</i>"
+        )
+        logger.info(f"Answer sent for question {question_id}")
         return True
-
+        
     except Exception as e:
-        await message.answer("❌ Ошибка при сохранении ответа")
-        logger.error(f"Error saving answer: {e}")
+        await message.answer("❌ Ошибка сохранения")
+        logger.error(f"Save answer error: {e}")
         return True
 
-
-async def cancel_answer_mode(callback: CallbackQuery):
-    """
-    Cancel admin's answer mode.
-
-    This function:
-    - Validates state
-    - Cleans up state
-    - Notifies admin
-    - Logs action
-
-    Features:
-    - State cleanup
-    - User notification
-    - Error handling
-    - Activity logging
-
-    Args:
-        callback: Telegram callback query
-    """
-    admin_id = callback.from_user.id
-
-    if admin_id in admin_answer_states:
-        question_id = admin_answer_states[admin_id]['question_id']
-        del admin_answer_states[admin_id]
-
-        await callback.message.edit_text(
-            "❌ Режим ответа отменен",
-            reply_markup=None
+async def _notify_user_with_answer(message: Message, user_id: int, question_text: str, answer_text: str):
+    """Send answer to user with error handling."""
+    try:
+        await message.bot.send_message(
+            chat_id=user_id,
+            text=USER_ANSWER_RECEIVED.format(question=question_text, answer=answer_text) +
+                 "\n\n💬 <b>Хотите задать новый вопрос?</b>",
+            reply_markup=get_user_question_sent_keyboard()
+        )
+        await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
+        
+    except Exception as e:
+        logger.error(f"Failed to notify user {user_id}: {e}")
+        await message.answer(
+            "✅ <b>Ответ сохранен!</b>\n\n"
+            f"<b>Вопрос:</b> {preview_text(question_text)}\n"
+            f"<b>Ответ:</b> {preview_text(answer_text)}\n\n"
+            "⚠️ Не удалось отправить пользователю"
         )
 
-        await callback.answer("Режим ответа отменен")
-        logger.info(
-            f"Admin {admin_id} canceled answer mode for question {question_id}")
+async def cancel_answer_mode(callback_or_message):
+    """Cancel answer mode - accepts CallbackQuery or Message."""
+    # Handle both CallbackQuery and Message
+    if hasattr(callback_or_message, 'from_user'):
+        # It's a CallbackQuery
+        admin_id = callback_or_message.from_user.id
+        callback = callback_or_message
+        message = callback.message
     else:
-        await callback.answer("Режим ответа уже завершен")
+        # It's a Message (from try/except in admin.py)
+        admin_id = ADMIN_ID  # Admin is the only one who can cancel
+        callback = None
+        message = callback_or_message
+    
+    state = admin_answer_states.pop(admin_id, None)
+    if state:
+        await message.edit_text("❌ Режим ответа отменен", reply_markup=None)
+        if callback:
+            await callback.answer("Отменено")
+        logger.info(f"Admin {admin_id} canceled answer for {state['question_id']}")
+    else:
+        if callback:
+            await callback.answer("Режим ответа не активен")
+        else:
+            logger.warning(f"Admin {admin_id} tried to cancel non-active answer mode")
 
-
-# ИСПРАВЛЕНИЕ: Убираем await из этой функции - она НЕ асинхронная
+# Legacy compatibility
 def is_admin_in_answer_mode(admin_id: int) -> bool:
-    """Check if admin is currently in answer mode."""
-    # Clean up expired states first
-    cleanup_expired_states()
-
-    in_mode = admin_id in admin_answer_states and admin_answer_states[
-        admin_id]['mode'] == 'waiting_answer'
-
-    if in_mode:
-        logger.debug(
-            f"Admin {admin_id} is in answer mode for question {admin_answer_states[admin_id]['question_id']}")
-
-    return in_mode
-
-
-def get_admin_state_info(admin_id: int) -> dict:
-    """Get admin state info for debugging."""
-    if admin_id in admin_answer_states:
-        return admin_answer_states[admin_id]
-    return {}
-
+    """Legacy function name - use is_admin_answering instead."""
+    return is_admin_answering(admin_id)
 
 def force_clear_admin_state(admin_id: int) -> bool:
-    """Force clear admin state (for emergency use)."""
-    if admin_id in admin_answer_states:
-        del admin_answer_states[admin_id]
-        logger.warning(f"Force cleared state for admin {admin_id}")
-        return True
-    return False
+    """Force clear admin state."""
+    return bool(admin_answer_states.pop(admin_id, None))
