@@ -16,7 +16,7 @@ import os
 import sqlite3
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import asyncio
 import logging
@@ -24,6 +24,7 @@ import logging
 from aiogram import Bot
 from aiogram.types import FSInputFile, BufferedInputFile
 from config import LOG_FILE_PATH, TOKEN, BACKUP_RECIPIENT_ID
+from utils.time_helper import format_admin_time
 from models.database import DB_PATH
 from utils.logging_setup import get_logger
 logger = get_logger(__name__)
@@ -47,7 +48,7 @@ class BackupManager:
                     f"Database file {self.db_path} not found!")
 
             with tempfile.TemporaryDirectory() as tmp_dir:
-                timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                timestamp = datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')
                 backup_filename = f"backup_{timestamp}.db"
                 zip_filename = f"bot_backup_{timestamp}.zip"
 
@@ -124,8 +125,10 @@ class BackupManager:
         try:
             db_stats = self._get_database_stats()
 
+            created_at = format_admin_time(
+                datetime.utcnow(), "%d.%m.%Y %H:%M:%S")
             backup_info = f"""🤖 Bot Backup Information
-Created: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+Created: {created_at}
 Database: {os.path.basename(self.db_path)}
 Database Size: {db_size:,} bytes ({db_size / 1024 / 1024:.2f} MB)
 
@@ -145,7 +148,7 @@ Created using SQLite backup() method for data integrity.
 
         except Exception as e:
             logger.warning(f"Error creating backup info: {e}")
-            return f"Backup created: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\nError getting detailed info: {e}"
+            return f"Backup created: {format_admin_time(datetime.utcnow(), '%d.%m.%Y %H:%M:%S')}\nError getting detailed info: {e}"
 
     def _get_database_stats(self) -> str:
         """Gets statistics on tables in the database."""
@@ -275,7 +278,7 @@ How to restore your bot from this backup:
 
 📁 File: {filename}
 📊 Size: {size_mb:.1f} MB
-📅 Created: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+📅 Created: {format_admin_time(datetime.utcnow())}
 🔒 Method: SQLite backup() - guarantees data integrity
 
 📋 Archive contains detailed restoration instructions"""
@@ -314,15 +317,17 @@ How to restore your bot from this backup:
             backup_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
 
             total_size = sum(f.stat().st_size for f in backup_files)
-            newest = datetime.fromtimestamp(backup_files[0].stat().st_mtime)
-            oldest = datetime.fromtimestamp(backup_files[-1].stat().st_mtime)
+            newest = datetime.fromtimestamp(
+                backup_files[0].stat().st_mtime, tz=timezone.utc)
+            oldest = datetime.fromtimestamp(
+                backup_files[-1].stat().st_mtime, tz=timezone.utc)
 
             return {
                 'total_backups': len(backup_files),
                 'total_size_mb': round(total_size / 1024 / 1024, 2),
                 'backup_directory': str(self.backup_dir),
-                'newest_backup': newest.strftime('%d.%m.%Y %H:%M'),
-                'oldest_backup': oldest.strftime('%d.%m.%Y %H:%M')
+                'newest_backup': format_admin_time(newest),
+                'oldest_backup': format_admin_time(oldest)
             }
 
         except Exception as e:

@@ -109,6 +109,28 @@ def get_favorite_question_keyboard(question_id: int) -> InlineKeyboardMarkup:
     return keyboard
 
 
+def get_answered_question_keyboard(question_id: int, is_favorite: bool) -> InlineKeyboardMarkup:
+    """Keyboard for answered questions (no reply button)."""
+    fav_text = "⭐ Убрать из избранного" if is_favorite else "⭐ В избранное"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=fav_text,
+                    callback_data=f"favorite:{question_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Удалить",
+                    callback_data=f"delete:{question_id}"
+                )
+            ]
+        ]
+    )
+    return keyboard
+
+
 def get_answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
     """
     Create keyboard for answer mode.

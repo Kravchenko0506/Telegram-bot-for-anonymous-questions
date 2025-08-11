@@ -156,6 +156,7 @@ SENTRY_DSN=                         # For error monitoring (optional)
 | `/backup` | Create and send backup to configured recipient |
 | `/backup_me` | Create and send backup to current admin |
 | `/backup_info` | Backup system information |
+| `/settings` | View current settings |
 
 #### Managing Questions
 
@@ -247,29 +248,92 @@ Current code coverage: approximately 61%.
 ### Project Structure
 
 ```
-anon-questions-bot/
-├── handlers/           # Command and message handlers
-│   ├── start.py       # /start command
-│   ├── admin.py       # Admin commands
-│   ├── questions.py   # Question processing
-│   └── admin_states.py # Admin states
-├── models/            # Data models
-│   ├── database.py    # Database connection
-│   ├── questions.py   # Questions model
-│   ├── settings.py    # Bot settings
-│   └── user_states.py # User states
-├── middlewares/       # Middleware handlers
-│   ├── rate_limit.py  # Rate limiting
-│   └── error_handler.py # Error handling
-├── utils/             # Utilities
-│   ├── validators.py  # Validation and moderation
-│   ├── logger.py      # Logging system
-│   └── periodic_tasks.py # Background tasks
-├── keyboards/         # Keyboards
-│   └── inline.py      # Inline keyboards
-├── config.py          # Configuration
-├── main.py           # Entry point
-└── requirements.txt   # Dependencies
+anon_question_bot_production/
+├── 📁 handlers/                    # Command and message handlers
+│   ├── 📄 __init__.py
+│   ├── 📄 start.py                 # /start command
+│   ├── 📄 admin.py                 # Admin commands (/admin, /stats, /backup)
+│   ├── 📄 questions.py             # Question processing
+│   ├── 📄 admin_limits.py          # Admin rate limiting
+│   └── 📄 admin_states.py          # Admin states and responses
+│
+├── 📁 models/                      # Data models and database
+│   ├── 📄 __init__.py
+│   ├── 📄 database.py              # Database connection and operations
+│   ├── 📄 questions.py             # Questions model
+│   ├── 📄 settings.py              # Bot settings model
+│   ├── 📄 admin_state.py           # Admin state model
+│   └── 📄 user_states.py           # User states management
+│
+├── 📁 middlewares/                 # Middleware handlers
+│   ├── 📄 __init__.py
+│   ├── 📄 rate_limit.py            # Rate limiting middleware
+│   └── 📄 error_handler.py         # Global error handling
+│
+├── 📁 utils/                       # Utilities and services
+│   ├── 📄 __init__.py
+│   ├── 📄 validators.py            # Input validation and moderation
+│   ├── 📄 logging_setup.py         # Advanced logging system
+│   ├── 📄 telegram_backup.py       # 💾 Backup system with Telegram delivery
+│   └── 📄 periodic_tasks.py        # Background tasks and scheduling
+│
+├── 📁 keyboards/                   # Telegram keyboards
+│   ├── 📄 __init__.py
+│   └── 📄 inline.py                # Inline keyboards
+│
+├── 📁 services/                    # Business logic services
+│   └── 📄 __init__.py
+│
+├── 📁 Tests/                       # Testing suite
+│   ├── 📄 conftest.py              # Test configuration and fixtures
+│   ├── 📄 test_handlers.py         # Handler tests
+│   ├── 📄 test_models.py           # Model tests
+│   ├── 📄 test_utils.py            # Utility tests
+│   ├── 📄 test_middleware.py       # Middleware tests
+│   └── 📄 test_integration.py      # Integration tests
+│
+├── 📁 data/                        # Application data
+│   ├── 📁 backups/                 # Local backup storage
+│   │   ├── 📄 bot_backup_2025-08-06_21-51-26.zip
+│   │   ├── 📄 bot_backup_2025-08-06_21-51-34.zip
+│   │   └── 📄 bot_backup_2025-08-06_21-54-07.zip
+│   ├── 📄 bot_database.db          # SQLite database
+│   └── 📄 bot.log                  # Application logs
+│
+├── 📁 logs/                        # Log files directory
+├── 📁 .venv/                       # Python virtual environment
+├── 📁 __pycache__/                 # Python bytecode cache
+│
+├── 📄 main.py                      # 🚀 Application entry point
+├── 📄 config.py                    # ⚙️ Configuration management
+├── 📄 check_config.py              # Configuration validation
+├── 📄 requirements.txt             # Production dependencies
+├── 📄 requirements-dev.txt         # Development dependencies
+├── 📄 .env                         # Environment variables
+├── 📄 .env.example                 # Environment variables template
+├── 📄 .gitignore                   # Git ignore rules
+│
+├── 📄 run_tests.py                 # Test runner script
+├── 📄 setup_tests.py               # Test setup utilities
+├── 📄 test_diagnostics.py          # Diagnostic tests
+├── 📄 pytest.ini                  # Pytest configuration
+│
+├── 📄 Makefile                     # Build automation
+├── 📄 Dockerfile                   # Docker container
+├── 📄 docker-compose.yml           # Docker Compose configuration
+├── 📄 deployment_check.py          # Deployment readiness check
+├── 📄 reset_database.py            # Database initialization
+├── 📄 systemd.service              # Systemd service configuration
+├── 📄 nginx.conf                   # Nginx reverse proxy config
+├── 📄 gunicorn.conf.py             # Gunicorn WSGI server config
+│
+├── 📄 README.md                    # 📚 Main documentation (English)
+├── 📄 README_RUS.md                # 📚 Russian documentation
+├── 📄 CONFIG_PARAMS.md             # 📋 Configuration parameters (Russian)
+├── 📄 CONFIG_PARAMS_EN.md          # 📋 Configuration parameters (English)
+├── 📄 DEPLOY.md                    # 🚀 Deployment guide
+│
+└── 📄 LICENSE                      # MIT License
 ```
 
 ### Technology Stack
@@ -346,6 +410,17 @@ Component logging levels (in normal mode):
 - **utils**: INFO — medium level for utilities
 - **periodic_tasks**: ERROR — only errors for periodic tasks
 - **handlers.admin**: INFO — informational level for admin functions
+
+### Timezone (ADMIN_TIMEZONE)
+
+All datetimes are stored internally in UTC. Presentation for the admin (question lists, notifications, backup captions, file log timestamps) is converted to the timezone specified via `ADMIN_TIMEZONE` environment variable (default `UTC`).
+
+Examples:
+```
+ADMIN_TIMEZONE=Europe/Berlin
+ADMIN_TIMEZONE=America/New_York
+```
+Invalid values gracefully fall back to UTC with a warning in logs.
 
 ## 🛡️ Security
 

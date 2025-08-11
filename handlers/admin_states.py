@@ -81,7 +81,7 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int, question=
     - Handles errors
     - Accepts an optional question object to prevent
     creating multiple database sessions for the same operation.
-    
+
     Features:
     - Question validation
     - State initialization
@@ -135,9 +135,11 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int, question=
             del admin_answer_states[admin_id]
 
         # Set admin state with timestamp
+        # Store only plain primitives; guard against unexpected None text
+        q_text = question.text if isinstance(question.text, str) else ""
         admin_answer_states[admin_id] = {
             'question_id': question_id,
-            'question_text': question.text,
+            'question_text': q_text,
             'user_id': question.user_id,
             'mode': 'waiting_answer',
             'created_at': datetime.utcnow()
@@ -221,9 +223,12 @@ async def handle_admin_answer(message: Message):
         return False
 
     answer_text = message.text.strip()
-    question_id = state['question_id']
-    user_id = state['user_id']
-    question_text = state['question_text']
+    question_id = state.get('question_id')
+    user_id = state.get('user_id')
+    question_text = state.get('question_text') or ""
+    if question_id is None or user_id is None:
+        logger.error(f"Corrupted admin answer state: {state}")
+        return True
 
     if not answer_text:
         await message.answer("❌ Ответ не может быть пустым. Попробуйте еще раз.")
@@ -257,10 +262,12 @@ async def handle_admin_answer(message: Message):
             from models.user_states import UserStateManager
             keyboard = get_user_question_sent_keyboard()
 
-            user_message_with_button = USER_ANSWER_RECEIVED.format(
-                question=question_text,
-                answer=answer_text
-            ) + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
+            user_message_with_button = (
+                USER_ANSWER_RECEIVED.format(
+                    question=question_text,
+                    answer=answer_text
+                ) + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
+            )
 
             await message.bot.send_message(
                 chat_id=user_id,
@@ -272,23 +279,31 @@ async def handle_admin_answer(message: Message):
             await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
 
             # Success confirmation
-            confirmation_text = f"""✅ <b>Ответ успешно отправлен!</b>
+            def _preview(s: str) -> str:
+                s = s or ""
+                return s if len(s) <= 100 else s[:100] + "..."
 
-<b>Вопрос:</b> {question_text[:100]}...
-<b>Ваш ответ:</b> {answer_text[:100]}...
-
-<i>Ответ доставлен пользователю анонимно</i>"""
+            confirmation_text = (
+                "✅ <b>Ответ успешно отправлен!</b>\n\n"
+                f"<b>Вопрос:</b> {_preview(question_text)}\n"
+                f"<b>Ваш ответ:</b> {_preview(answer_text)}\n\n"
+                "<i>Ответ доставлен пользователю анонимно</i>"
+            )
 
             await message.answer(confirmation_text)
             logger.info(f"Answer sent successfully for question {question_id}")
 
         except Exception as e:
             logger.error(f"Failed to send answer to user {user_id}: {e}")
+
+            def _preview(s: str) -> str:
+                s = s or ""
+                return s if len(s) <= 100 else s[:100] + "..."
             await message.answer(
-                f"✅ <b>Ответ сохранен!</b>\n\n"
-                f"<b>Вопрос:</b> {question_text[:100]}...\n"
-                f"<b>Ваш ответ:</b> {answer_text[:100]}...\n\n"
-                f"⚠️ Не удалось отправить пользователю (возможно, заблокировал бота)."
+                "✅ <b>Ответ сохранен!</b>\n\n"
+                f"<b>Вопрос:</b> {_preview(question_text)}\n"
+                f"<b>Ваш ответ:</b> {_preview(answer_text)}\n\n"
+                "⚠️ Не удалось отправить пользователю (возможно, заблокировал бота)."
             )
 
         return True

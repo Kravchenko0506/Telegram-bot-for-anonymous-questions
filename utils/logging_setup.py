@@ -13,6 +13,7 @@ import logging
 import logging.handlers
 import sys
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -28,8 +29,8 @@ from config import (
     SENTRY_TRACES_SAMPLE_RATE, ENABLE_PERFORMANCE_MONITORING,
     DEBUG_MODE, VERBOSE_DATABASE_LOGS
 )
+from utils.time_helper import ADMIN_TZ
 
-os.environ['TZ'] = 'Europe/Moscow'
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter with color support for console output"""
@@ -48,6 +49,24 @@ class ColoredFormatter(logging.Formatter):
             color = self.COLORS.get(record.levelname, '')
             record.levelname = f"{color}{record.levelname}{self.RESET}"
         return super().format(record)
+
+
+class TzFormatter(logging.Formatter):
+    """Formatter that renders record time in ADMIN_TZ (fallback UTC)."""
+
+    def __init__(self, fmt: str, datefmt: str | None = None, tz=None):
+        super().__init__(fmt, datefmt)
+        self.tz = tz or ADMIN_TZ
+
+    def formatTime(self, record, datefmt=None):  # noqa: N802
+        try:
+            dt = datetime.fromtimestamp(
+                record.created, timezone.utc).astimezone(self.tz)
+            if datefmt:
+                return dt.strftime(datefmt)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:  # pragma: no cover
+            return super().formatTime(record, datefmt)
 
 
 def setup_sentry() -> bool:
@@ -147,7 +166,7 @@ def setup_logging() -> None:
             encoding='utf-8'
         )
         file_handler.setLevel(getattr(logging, LOG_LEVEL))
-        file_formatter = logging.Formatter(LOG_FORMAT)
+        file_formatter = TzFormatter(LOG_FORMAT)
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
 
@@ -194,11 +213,11 @@ def configure_logger_levels() -> None:
         logging.getLogger("handlers").setLevel(logging.DEBUG)
         logging.getLogger("models").setLevel(logging.WARNING)
         logging.getLogger("middlewares").setLevel(
-            logging.INFO) 
+            logging.INFO)
         logging.getLogger("utils").setLevel(
-            logging.INFO) 
+            logging.INFO)
         logging.getLogger("periodic_tasks").setLevel(
-            logging.ERROR) 
+            logging.ERROR)
         logging.getLogger("handlers.admin").setLevel(logging.INFO)
 
 

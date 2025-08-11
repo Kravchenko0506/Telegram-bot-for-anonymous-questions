@@ -18,6 +18,7 @@
 | `MAX_PAGES_TO_SHOW` | integer | 100 | Максимальное количество отображаемых страниц |
 | `ADMIN_AUTO_REFRESH` | boolean | false | Автоматическое обновление списков после действий |
 | `SHOW_QUESTION_PREVIEW_LENGTH` | integer | 200 | Длина предварительного просмотра вопроса в админ-панели |
+| `ADMIN_TIMEZONE` | string | "UTC" | Часовой пояс для отображения дат и времени (формат IANA, напр. Europe/Moscow) |
 
 ## 💬 Настройки сообщений
 

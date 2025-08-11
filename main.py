@@ -1,34 +1,13 @@
-"""
-Anonymous Questions Telegram Bot
-
-A production-ready Telegram bot that enables anonymous question submission with 
-comprehensive admin management and security features.
-
-Core Features:
-- Anonymous question submission and management
-- Admin interface with extensive controls
-- Rate limiting and spam protection
-- Error tracking and logging (Sentry integration)
-- Database persistence (PostgreSQL)
-- Periodic maintenance tasks
-- Comprehensive security measures
-
-Technical Features:
-- Asynchronous architecture
-- Middleware-based request processing
-- Structured error handling
-- Database connection pooling
-- Resource cleanup on shutdown
-- Admin notifications
-- Command menu management
+"""Main bot launch module.
 """
 
 import asyncio
-import logging
+import signal
+from contextlib import suppress
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, CallbackQuery
+from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 
 from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
 from models.database import init_db, close_db, check_db_connection
@@ -41,364 +20,154 @@ from utils.periodic_tasks import start_periodic_tasks, stop_periodic_tasks
 setup_logging()
 logger = get_logger(__name__)
 
+_shutdown_flag = asyncio.Event()
+
+
+def _install_signals() -> None:
+    """Install SIGINT/SIGTERM handlers if supported by the platform."""
+    loop = asyncio.get_running_loop()
+    for sig in (getattr(signal, "SIGINT", None), getattr(signal, "SIGTERM", None)):
+        if sig is None:
+            continue
+        with suppress(NotImplementedError):
+            loop.add_signal_handler(sig, _shutdown_flag.set)
+
 
 async def setup_bot() -> tuple[Bot, Dispatcher]:
-    """
-    Initialize bot with standard aiogram configuration.
-
-    We keep this simple and let aiogram handle HTTP client management.
-    The main stability improvements come from polling configuration
-    and retry logic, not from HTTP client tweaking.
-    """
-    # Validate configuration first
+    """Create Bot & Dispatcher instances and attach middlewares."""
     validate_config()
-
-    # Create bot with standard settings - aiogram knows best how to configure HTTP client
-    bot = Bot(
-        token=TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
-
-    # Create dispatcher
+    bot = Bot(token=TOKEN, default=DefaultBotProperties(
+        parse_mode=ParseMode.HTML))
     dp = Dispatcher()
-
-    # Add middleware in correct order
-    # Error handler goes first to catch all errors
-    dp.message.middleware(ErrorHandlerMiddleware(notify_admin=True))
-    dp.callback_query.middleware(ErrorHandlerMiddleware(notify_admin=True))
-
-    # Rate limiting goes after error handling
+    # Errors first
+    err_mw = ErrorHandlerMiddleware(notify_admin=True)
+    dp.message.middleware(err_mw)
+    dp.callback_query.middleware(err_mw)
+    # Rate limits
     dp.message.middleware(RateLimitMiddleware())
     dp.callback_query.middleware(CallbackRateLimitMiddleware())
-
     return bot, dp
 
 
+USER_COMMANDS: list[tuple[str, str]] = [
+    ("start", "🚀 Начать работу"),
+]
+
+ADMIN_COMMANDS: list[tuple[str, str]] = [
+    ("start", "🚀 Админ-панель"),
+    ("set_author", "✏️ Имя автора"),
+    ("set_info", "📝 Описание"),
+    ("settings", "⚙️ Настройки"),
+    ("stats", "📊 Статистика"),
+    ("pending", "⏳ Неотвеченные"),
+    ("favorites", "⭐ Избранные"),
+    ("answered", "✅ Отвеченные"),
+    ("backup", "💾 Бэкап"),
+    ("backup_info", "📦 Инфо бэкапов"),
+    ("health", "🩺 Health"),
+]
+
+
 async def setup_bot_menu(bot: Bot) -> None:
-    """
-    Configure bot command menu for regular users and admin.
-
-    Sets up two different command sets:
-    - Regular users: Basic commands (/start)
-    - Admin: Extended command set for bot management
-
-    The admin commands include:
-    - Channel management (/set_author, /set_info)
-    - Bot settings (/settings)
-    - Statistics (/stats)
-    - Question management (/pending, /favorites)
-
-    Args:
-        bot: Bot instance to configure commands for
-    """
+    """Register user/admin command menus from USER_COMMANDS / ADMIN_COMMANDS."""
     try:
-        # Only /start command for all users
-        user_commands = [
-            BotCommand(command="start", description="🚀 Начать работу с ботом"),
-        ]
-
-        # Admin gets additional editing commands
-        admin_commands = [
-            BotCommand(command="start", description="🚀 Админ-панель"),
-            BotCommand(command="set_author",
-                       description="✏️ Изменить имя автора"),
-            BotCommand(command="set_info",
-                       description="📝 Изменить описание канала"),
-            BotCommand(command="settings", description="⚙️ Текущие настройки"),
-            BotCommand(command="stats", description="📊 Статистика"),
-            BotCommand(command="pending",
-                       description="⏳ Неотвеченные вопросы"),
-            BotCommand(command="favorites", description="⭐ Избранные"),
-            BotCommand(command="backup",
-                       description="💾 Создать резервную копию"),
-            BotCommand(command="backup_info",
-                       description="📦 Информация о бекапах"),
-        ]
-
-        # Set commands for all users (only /start)
-        await bot.set_my_commands(user_commands, BotCommandScopeDefault())
-
-        # Set admin-specific commands
         await bot.set_my_commands(
-            admin_commands,
+            [BotCommand(command=c, description=d) for c, d in USER_COMMANDS],
+            BotCommandScopeDefault()
+        )
+        await bot.set_my_commands(
+            [BotCommand(command=c, description=d) for c, d in ADMIN_COMMANDS],
             BotCommandScopeChat(chat_id=ADMIN_ID)
         )
-
-        logger.info("Bot menu configured successfully")
-
-    except Exception as e:
-        logger.error(f"Failed to setup bot menu: {e}")
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"Не удалось установить команды: {e}")
 
 
 async def register_handlers(dp: Dispatcher) -> None:
-    """
-    Register all message and callback handlers in the correct order.
-
-    Handler Registration Priority:
-    1. Admin states - Highest priority, handles interactive admin mode
-    2. Admin handlers - Processes admin callbacks and commands
-    3. Start/help commands - Basic user interaction
-    4. Question handlers - Catch-all for user questions (lowest priority)
-
-    The order is critical for proper message routing.
-
-    Args:
-        dp: Dispatcher instance to register handlers with
-    """
-    # Register handlers in order of specificity
-    dp.include_router(admin_states.router)  # Admin interactive states
-    dp.include_router(admin.router)         # Admin callbacks and commands
-    dp.include_router(start.router)         # Start and help commands
-    # Question processing (catch-all, LAST)
+    """Include routers ordered by specificity (states → admin → general)."""
+    dp.include_router(admin_states.router)
+    dp.include_router(admin.router)
+    dp.include_router(start.router)
     dp.include_router(questions.router)
 
-    logger.info("All handlers registered successfully")
+
+async def _notify_admin(bot: Bot, text: str) -> None:
+    """Safely send a notification message to admin (suppresses failures)."""
+    with suppress(Exception):
+        await bot.send_message(ADMIN_ID, text)
 
 
 async def on_startup(bot: Bot) -> None:
-    """
-    Perform necessary startup tasks when the bot begins operation.
-
-    Tasks performed:
-    1. Database connection verification
-    2. Start periodic maintenance tasks
-    3. Retrieve and log bot information
-    4. Send startup notification to admin
-
-    Args:
-        bot: Bot instance to use for startup tasks
-
-    Raises:
-        Exception: If database connection fails
-    """
-    logger.info("Running startup tasks...")
-
-    # Verify database connection
+    """Startup hook: check DB connectivity, start periodic tasks, notify admin."""
+    logger.info("Стартую сервисы...")
     if not await check_db_connection():
-        raise Exception("Database connection failed")
-
-    # Start periodic tasks
+        raise RuntimeError("Нет подключения к БД")
     await start_periodic_tasks()
-
-    # Get bot info
-    bot_info = await bot.get_me()
-    logger.info(f"Bot started: @{bot_info.username}")
-
-    # Notify admin
-    """
-    try:
-        await bot.send_message(
-            ADMIN_ID,
-            "✅ Бот запущен и готов к работе!\n\n"
-            f"Версия: Production Ready\n"
-            f"Имя: @{bot_info.username}"
-        )
-    except Exception as e:
-        logger.error(f"Failed to notify admin on startup: {e}")
-    """
+    info = await bot.get_me()
+    await _notify_admin(bot, f"✅ Бот запущен: @{info.username}")
 
 
 async def on_shutdown(bot: Bot) -> None:
-    """
-    Perform cleanup tasks when the bot is shutting down.
-
-    Tasks performed:
-    1. Stop periodic maintenance tasks
-    2. Send shutdown notification to admin
-    3. Close bot session
-
-    Args:
-        bot: Bot instance to perform shutdown tasks with
-    """
-    logger.info("Running shutdown tasks...")
-
-    # Stop periodic tasks
+    """Shutdown hook: stop tasks, notify admin, close bot session."""
+    logger.info("Останавливаю сервисы...")
     await stop_periodic_tasks()
-
-    # Notify admin
-    """
-    try:
-        await bot.send_message(ADMIN_ID, "⚠️ Бот остановлен")
-    except Exception:
-        pass  # Ignore errors on shutdown
-    """
-
-    # Close bot session
+    await _notify_admin(bot, "⚠️ Бот остановлен")
     await bot.session.close()
 
 
-async def start_polling_with_retry(bot: Bot, dp: Dispatcher) -> None:
-    """
-    Start polling with automatic retry on network failures.
-
-    Handles common Telegram API issues:
-    - Connection reset by peer
-    - Request timeouts  
-    - Server disconnections
-
-    Implements exponential backoff: 60s -> 120s -> 240s -> 480s -> 600s
-    """
-    from config import (
-        POLLING_TIMEOUT, MAX_POLLING_RETRIES,
-        RETRY_DELAY_BASE, MAX_RETRY_DELAY, ALLOWED_UPDATES
-    )
-
-    retry_count = 0
-
-    while retry_count < MAX_POLLING_RETRIES:
+async def start_polling(bot: Bot, dp: Dispatcher) -> None:
+    """Start polling with short retry backoff for transient network errors."""
+    from config import POLLING_TIMEOUT, ALLOWED_UPDATES
+    attempts = 0
+    while not _shutdown_flag.is_set():
         try:
-            logger.info(
-                f"Starting polling (attempt {retry_count + 1}/{MAX_POLLING_RETRIES})"
-                f" with {POLLING_TIMEOUT}s timeout..."
-            )
-
             await dp.start_polling(
                 bot,
                 timeout=POLLING_TIMEOUT,
                 allowed_updates=ALLOWED_UPDATES,
-                # drop_pending_updates=False - сохраняем все сообщения!
+                stop_signal=None,
             )
-
-            # If we reach here, polling started successfully
-            logger.info("Polling started successfully")
-            break
-
-        except KeyboardInterrupt:
-            logger.info("Polling interrupted by user")
+            break  # graceful stop (shutdown requested)
+        except asyncio.CancelledError:
             raise
-
-        except Exception as polling_error:
-            retry_count += 1
-
-            # Log the specific error
-            error_type = type(polling_error).__name__
-            logger.error(
-                f"Polling failed (attempt {retry_count}/{MAX_POLLING_RETRIES}): "
-                f"{error_type}: {polling_error}"
-            )
-
-            # If max retries reached, give up
-            if retry_count >= MAX_POLLING_RETRIES:
-                logger.critical(
-                    f"Max polling retries ({MAX_POLLING_RETRIES}) reached. "
-                    "Bot cannot connect to Telegram API."
-                )
-                raise polling_error
-
-            # Calculate exponential backoff delay
-            delay = min(
-                RETRY_DELAY_BASE * (2 ** (retry_count - 1)),
-                MAX_RETRY_DELAY
-            )
-
-            logger.info(f"Retrying in {delay} seconds...")
-            await asyncio.sleep(delay)
-
-
-async def main() -> None:
-    """
-    Main application entry point and lifecycle manager.
-
-    Responsibilities:
-    1. Database initialization
-    2. Bot and dispatcher setup
-    3. Command menu configuration
-    4. Handler registration
-    5. Startup/shutdown handler registration
-    6. Bot polling management
-    7. Resource cleanup
-
-    Error Handling:
-    - Graceful handling of keyboard interrupts
-    - Critical error logging
-    - Resource cleanup in all cases
-    """
-    try:
-        logger.info("Starting Anonymous Questions Bot (Production Mode)...")
-
-        # Initialize database
-        logger.info("Initializing PostgreSQL database...")
-        await init_db()
-
-        # Setup bot and dispatcher
-        bot, dp = await setup_bot()
-
-        # Setup bot menu
-        await setup_bot_menu(bot)
-
-        # Register handlers
-        await register_handlers(dp)
-
-        # Set startup and shutdown hooks
-        dp.startup.register(on_startup)
-        dp.shutdown.register(on_shutdown)
-
-        # Start bot polling
-        logger.info("Bot is starting polling...")
-
-        await start_polling_with_retry(bot, dp)
-
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user (Ctrl+C)")
-
-    except Exception as e:
-        logger.error(f"Critical error: {e}")
-        capture_error(e, {"phase": "main_application"})
-        raise
-
-    finally:
-        # Cleanup resources
-        try:
-            await close_db()
-            logger.info("Database connections closed")
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            attempts += 1
+            logger.error(f"Polling сбой ({attempts}): {type(e).__name__}: {e}")
+            if attempts >= 3:
+                raise
+            await asyncio.sleep(min(5 * attempts, 20))
+
+
+async def main_flow() -> None:
+    """Full initialization pipeline before entering polling loop."""
+    logger.info("Инициализация БД...")
+    await init_db()
+    bot, dp = await setup_bot()
+    await setup_bot_menu(bot)
+    await register_handlers(dp)
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+    await start_polling(bot, dp)
+
+
+async def safe_main() -> None:
+    """Top-level guarded runner: install signals, run flow, capture fatal errors, release resources."""
+    _install_signals()
+    try:
+        await main_flow()
+    except KeyboardInterrupt:
+        logger.info("Остановлено пользователем")
+    except Exception as e:
+        logger.critical(f"КРИТИЧЕСКАЯ ОШИБКА: {e}", exc_info=True)
+        if SENTRY_DSN:
+            with suppress(Exception):
+                capture_error(e, {"phase": "fatal", "type": type(e).__name__})
+        raise
+    finally:
+        await close_db()
+        logger.info("Ресурсы освобождены")
 
 
 if __name__ == "__main__":
-    """
-    Application entry point with comprehensive error handling.
-
-    Provides detailed error information to Sentry and logs
-    for production debugging.
-    """
-
-    print("🚀 Starting Anonymous Questions Bot...")
-
-    try:
-        asyncio.run(main())
-
-    except KeyboardInterrupt:
-        print("\n🛑 Bot stopped by user (Ctrl+C)")
-        logger.info("Bot stopped by KeyboardInterrupt")
-
-    except Exception as critical_error:
-        # Get error details
-        error_type = type(critical_error).__name__
-        error_msg = str(critical_error)
-
-        # Log with full traceback for debugging
-        logger.critical(
-            f"Critical startup failure: {error_type}: {error_msg}",
-            exc_info=True  # This sends full traceback to Sentry
-        )
-
-        # Send detailed context to Sentry
-        try:
-            from utils.logging_setup import capture_error
-            capture_error(critical_error, {
-                "phase": "application_startup",
-                "error_type": error_type,
-                "function": "asyncio.run(main)",
-                "severity": "critical",
-                "bot_version": "production"
-            })
-        except ImportError:
-            logger.warning("Sentry not available for error reporting")
-
-        # User-friendly error message
-        print(f"\n❌ Critical error: {error_type}")
-        print(f"💬 Details: {error_msg}")
-        print("📋 Check logs for full traceback")
-
-        exit(1)
+    print("🚀 Запуск бота...")
+    asyncio.run(safe_main())

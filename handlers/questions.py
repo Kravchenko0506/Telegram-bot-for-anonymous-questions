@@ -303,12 +303,14 @@ async def handle_user_question(message: Message):
         logger.info(f"Question saved: ID={question_id}, user state updated")
 
         # Send notification to admin (with error handling)
+        from utils.time_helper import format_admin_time
+        sent_at = format_admin_time(datetime.utcnow())
         admin_message = f"""
 ❓ <b>Новый анонимный вопрос #{question_id}:</b>
 
 {question_text}
 
-<i>Отправлено: {datetime.now().strftime("%d.%m.%Y %H:%M")}</i>
+<i>Отправлено: {sent_at}</i>
 """
 
         # Add spam score if suspicious

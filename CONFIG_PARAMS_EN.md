@@ -18,6 +18,7 @@ This document contains all configuration parameters for the bot, categorized by 
 | `MAX_PAGES_TO_SHOW` | integer | 100 | Maximum number of pages to display |
 | `ADMIN_AUTO_REFRESH` | boolean | false | Automatic refresh of lists after actions |
 | `SHOW_QUESTION_PREVIEW_LENGTH` | integer | 200 | Length of question preview in admin panel |
+| `ADMIN_TIMEZONE` | string | "UTC" | Timezone for displaying dates/times (IANA format, e.g. Europe/Berlin) |
 
 ## 💬 Message Settings
 
