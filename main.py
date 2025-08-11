@@ -44,37 +44,30 @@ logger = get_logger(__name__)
 
 async def setup_bot() -> tuple[Bot, Dispatcher]:
     """
-    Initialize and configure bot and dispatcher instances.
+    Initialize bot with standard aiogram configuration.
 
-    This function:
-    - Validates all configuration parameters
-    - Creates bot instance with HTML parsing
-    - Sets up dispatcher with middleware stack
-    - Configures error handling and rate limiting
-
-    Returns:
-        tuple[Bot, Dispatcher]: Configured bot and dispatcher instances
+    We keep this simple and let aiogram handle HTTP client management.
+    The main stability improvements come from polling configuration
+    and retry logic, not from HTTP client tweaking.
     """
-    # Validate configuration
+    # Validate configuration first
     validate_config()
 
-    # Create bot instance with default properties
+    # Create bot with standard settings - aiogram knows best how to configure HTTP client
     bot = Bot(
         token=TOKEN,
-        default=DefaultBotProperties(
-            parse_mode=ParseMode.HTML
-        )
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
     # Create dispatcher
     dp = Dispatcher()
 
     # Add middleware in correct order
-    # 1. Error handler (outermost - catches all errors)
+    # Error handler goes first to catch all errors
     dp.message.middleware(ErrorHandlerMiddleware(notify_admin=True))
     dp.callback_query.middleware(ErrorHandlerMiddleware(notify_admin=True))
 
-    # 2. Rate limiting
+    # Rate limiting goes after error handling
     dp.message.middleware(RateLimitMiddleware())
     dp.callback_query.middleware(CallbackRateLimitMiddleware())
 
@@ -116,6 +109,10 @@ async def setup_bot_menu(bot: Bot) -> None:
             BotCommand(command="pending",
                        description="⏳ Неотвеченные вопросы"),
             BotCommand(command="favorites", description="⭐ Избранные"),
+            BotCommand(command="backup",
+                       description="💾 Создать резервную копию"),
+            BotCommand(command="backup_info",
+                       description="📦 Информация о бекапах"),
         ]
 
         # Set commands for all users (only /start)
@@ -230,6 +227,74 @@ async def on_shutdown(bot: Bot) -> None:
     await bot.session.close()
 
 
+async def start_polling_with_retry(bot: Bot, dp: Dispatcher) -> None:
+    """
+    Start polling with automatic retry on network failures.
+
+    Handles common Telegram API issues:
+    - Connection reset by peer
+    - Request timeouts  
+    - Server disconnections
+
+    Implements exponential backoff: 60s -> 120s -> 240s -> 480s -> 600s
+    """
+    from config import (
+        POLLING_TIMEOUT, MAX_POLLING_RETRIES,
+        RETRY_DELAY_BASE, MAX_RETRY_DELAY, ALLOWED_UPDATES
+    )
+
+    retry_count = 0
+
+    while retry_count < MAX_POLLING_RETRIES:
+        try:
+            logger.info(
+                f"Starting polling (attempt {retry_count + 1}/{MAX_POLLING_RETRIES})"
+                f" with {POLLING_TIMEOUT}s timeout..."
+            )
+
+            await dp.start_polling(
+                bot,
+                timeout=POLLING_TIMEOUT,
+                allowed_updates=ALLOWED_UPDATES,
+                # drop_pending_updates=False - сохраняем все сообщения!
+            )
+
+            # If we reach here, polling started successfully
+            logger.info("Polling started successfully")
+            break
+
+        except KeyboardInterrupt:
+            logger.info("Polling interrupted by user")
+            raise
+
+        except Exception as polling_error:
+            retry_count += 1
+
+            # Log the specific error
+            error_type = type(polling_error).__name__
+            logger.error(
+                f"Polling failed (attempt {retry_count}/{MAX_POLLING_RETRIES}): "
+                f"{error_type}: {polling_error}"
+            )
+
+            # If max retries reached, give up
+            if retry_count >= MAX_POLLING_RETRIES:
+                logger.critical(
+                    f"Max polling retries ({MAX_POLLING_RETRIES}) reached. "
+                    "Bot cannot connect to Telegram API."
+                )
+                raise polling_error
+
+            # Calculate exponential backoff delay
+            delay = min(
+                RETRY_DELAY_BASE * (2 ** (retry_count - 1)),
+                MAX_RETRY_DELAY
+            )
+
+            logger.info(f"Retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
+
+
 async def main() -> None:
     """
     Main application entry point and lifecycle manager.
@@ -271,7 +336,7 @@ async def main() -> None:
         # Start bot polling
         logger.info("Bot is starting polling...")
 
-        await dp.start_polling(bot, timeout=20)
+        await start_polling_with_retry(bot, dp)
 
     except KeyboardInterrupt:
         logger.info("Bot stopped by user (Ctrl+C)")
@@ -292,20 +357,48 @@ async def main() -> None:
 
 if __name__ == "__main__":
     """
-    Application entry point.
+    Application entry point with comprehensive error handling.
 
-    Sets up proper logging and runs the main coroutine.
+    Provides detailed error information to Sentry and logs
+    for production debugging.
     """
 
-    print("🚀 Starting bot...")
-    print("📁 Logs: console + persistent log files")
-    print("🔒 Security features enabled")
+    print("🚀 Starting Anonymous Questions Bot...")
 
     try:
         asyncio.run(main())
+
     except KeyboardInterrupt:
-        print("\n Bot stopped")
-    except Exception as e:
-        print(f"❌ Failed to start bot: {e}")
-        logging.exception("Critical startup error")
+        print("\n🛑 Bot stopped by user (Ctrl+C)")
+        logger.info("Bot stopped by KeyboardInterrupt")
+
+    except Exception as critical_error:
+        # Get error details
+        error_type = type(critical_error).__name__
+        error_msg = str(critical_error)
+
+        # Log with full traceback for debugging
+        logger.critical(
+            f"Critical startup failure: {error_type}: {error_msg}",
+            exc_info=True  # This sends full traceback to Sentry
+        )
+
+        # Send detailed context to Sentry
+        try:
+            from utils.logging_setup import capture_error
+            capture_error(critical_error, {
+                "phase": "application_startup",
+                "error_type": error_type,
+                "function": "asyncio.run(main)",
+                "severity": "critical",
+                "bot_version": "production"
+            })
+        except ImportError:
+            logger.warning("Sentry not available for error reporting")
+
+        # User-friendly error message
+        print(f"\n❌ Critical error: {error_type}")
+        print(f"💬 Details: {error_msg}")
+        print("📋 Check logs for full traceback")
+
         exit(1)

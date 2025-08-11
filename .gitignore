@@ -56,3 +56,5 @@ desktop.ini
 
 
 docker-compose.dev.yml
+.github/instructions/Instr.instructions.md
+.github/prompts/Prompt.prompt.md

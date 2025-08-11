@@ -59,6 +59,23 @@ This document contains all configuration parameters for the bot, categorized by 
 | `SENTRY_TRACES_SAMPLE_RATE` | float | 0.1 | Performance trace sampling rate (0.0 - 1.0) |
 | `ENABLE_PERFORMANCE_MONITORING` | boolean | false | Enable performance monitoring |
 
+## 💾 Backup System
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `BACKUP_ENABLED` | boolean | true | Enable automatic backup system |
+| `BACKUP_RECIPIENT_ID` | integer | - | Telegram user ID to receive backup files (required when enabled) |
+| `BACKUP_KEEP_LOCAL_COUNT` | integer | 3 | Number of local backup files to keep for cleanup |
+| `BACKUP_STORAGE_DIR` | string | "./data/backups" | Directory for local backup storage |
+
+### Backup System Notes
+
+- **BACKUP_RECIPIENT_ID is required** when BACKUP_ENABLED=true
+- Bot will fail to start if BACKUP_RECIPIENT_ID is not configured
+- BACKUP_RECIPIENT_ID can be different from ADMIN_ID for security
+- Local backups are automatically rotated based on BACKUP_KEEP_LOCAL_COUNT
+- Backup files are compressed ZIP archives with metadata and restore instructions
+
 ## 💌 Message Templates
 
 | Parameter | Type | Description |

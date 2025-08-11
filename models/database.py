@@ -30,14 +30,14 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# ИСПРАВЛЕНО: Используем абсолютный путь для Amvera persistent storage
-DB_DIR = Path("/data")  # ✅ Правильный путь для Amvera
+
+DB_DIR = Path("/data") 
 DB_DIR.mkdir(exist_ok=True)
 
-# Database file path в персистентном хранилище
+
 DB_PATH = DB_DIR / "bot_database.db"
 
-# Логируем где будет база данных
+
 print(f"🗄️ Database will be stored at: {DB_PATH}")
 logger.info(f"Database path: {DB_PATH}")
 

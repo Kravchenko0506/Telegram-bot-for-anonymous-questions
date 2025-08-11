@@ -23,7 +23,7 @@ Technical Features:
 - Security controls
 """
 
-from aiogram import Router
+from aiogram import Router, Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
 from datetime import datetime
@@ -40,7 +40,8 @@ from config import (
     SUCCESS_SETTING_UPDATED,
     ERROR_SETTING_UPDATE,
     ERROR_INVALID_VALUE,
-    BOT_USERNAME
+    BOT_USERNAME, QUESTIONS_PER_PAGE,
+    BACKUP_RECIPIENT_ID,
 )
 from models.database import async_session
 from models.questions import Question
@@ -55,8 +56,7 @@ from utils.logging_setup import get_logger
 from handlers.admin_states import (
     start_answer_mode,
     cancel_answer_mode,
-    handle_admin_answer,
-    is_admin_in_answer_mode
+
 )
 from models.settings import SettingsManager
 
@@ -64,7 +64,6 @@ router = Router()
 logger = get_logger(__name__)
 
 # Constants for pagination
-QUESTIONS_PER_PAGE = 10
 MAX_PAGES_TO_SHOW = 10
 
 
@@ -148,8 +147,9 @@ async def admin_question_callback(callback: CallbackQuery):
                 return
 
             if action == "answer":
-                # Start interactive answer mode
-                await start_answer_mode(callback, question_id)
+                # Start interactive answer mode, passing the question object
+                # to avoid creating another database session
+                await start_answer_mode(callback, question_id, question)
 
             elif action == "favorite":
                 question.is_favorite = not question.is_favorite
@@ -264,36 +264,41 @@ async def show_pending_questions_page(message: Message, page: int = 0, edit_mess
     """
     try:
         async with async_session() as session:
-            # Count total pending questions
+            # Execute both queries in explicit sequence to prevent SQLite lock conflicts
+            # First query: count total records
             total_stmt = select(func.count(Question.id)).where(
-                Question.answer.is_(None),
+                Question.is_favorite == True,
                 Question.is_deleted == False
             )
             total_result = await session.execute(total_stmt)
             total_count = total_result.scalar() or 0
 
+            # Early return if no records found
             if total_count == 0:
-                text = "📭 Нет неотвеченных вопросов!"
+                text = "⭐ Нет избранных вопросов."
                 if edit_message:
                     await message.edit_text(text, reply_markup=None)
                 else:
                     await message.answer(text)
                 return
 
-            # Calculate pagination
+            # Calculate pagination parameters
             total_pages = math.ceil(total_count / QUESTIONS_PER_PAGE)
-            # Ensure page is in bounds
             page = max(0, min(page, total_pages - 1))
             offset = page * QUESTIONS_PER_PAGE
 
-            # Get questions for current page
+            # Second query: load actual records in same transaction
+            # This prevents SQLite from creating separate lock contexts
             stmt = select(Question).where(
-                Question.answer.is_(None),
+                Question.is_favorite == True,
                 Question.is_deleted == False
-            ).order_by(Question.created_at.asc()).offset(offset).limit(QUESTIONS_PER_PAGE)
+            ).order_by(Question.created_at.desc()).offset(offset).limit(QUESTIONS_PER_PAGE)
 
             result = await session.execute(stmt)
             questions = result.scalars().all()
+
+            # At this point we have both count and records from single session
+            # No intermediate commits or rollbacks will occur
 
         # Create header message
         header_text = f"⏳ <b>Неотвеченные вопросы</b>\n\n📊 Страница {page + 1} из {total_pages} | Всего: {total_count}"
@@ -325,6 +330,16 @@ async def show_pending_questions_page(message: Message, page: int = 0, edit_mess
             question_keyboard = get_admin_question_keyboard(
                 question.id, is_favorite=question.is_favorite)
             await message.answer(question_text, reply_markup=question_keyboard)
+
+        logger.info(
+            f"Admin viewed pending questions page {page + 1}/{total_pages} ({len(questions)} questions)")
+
+        # Add bottom navigation for better UX
+        if total_pages > 1:
+            bottom_nav_text = f"📄 Навигация по страницам ({page + 1}/{total_pages})"
+            bottom_keyboard = get_pagination_keyboard(
+                page, total_pages, "pending_page")
+            await message.answer(bottom_nav_text, reply_markup=bottom_keyboard)
 
         logger.info(
             f"Admin viewed pending questions page {page + 1}/{total_pages} ({len(questions)} questions)")
@@ -429,6 +444,16 @@ async def show_favorites_page(message: Message, page: int = 0, edit_message: boo
 
             keyboard = get_favorite_question_keyboard(question.id)
             await message.answer(question_text, reply_markup=keyboard)
+
+        logger.info(
+            f"Admin viewed favorites page {page + 1}/{total_pages} ({len(questions)} questions)")
+
+# Add bottom navigation for better UX - users don't need to scroll back up
+        if total_pages > 1:
+            bottom_nav_text = f"📄 Навигация по страницам ({page + 1}/{total_pages})"
+            bottom_keyboard = get_pagination_keyboard(
+                page, total_pages, "favorites_page")
+            await message.answer(bottom_nav_text, reply_markup=bottom_keyboard)
 
         logger.info(
             f"Admin viewed favorites page {page + 1}/{total_pages} ({len(questions)} questions)")
@@ -888,14 +913,192 @@ async def settings_command(message: Message):
 
 def get_questions_per_page() -> int:
     """
-    Get questions per page setting.
-
-    This function:
-    - Returns page size
-    - Handles configuration
-    - Provides defaults
-
-    Returns:
-        int: Questions per page
+    Get questions per page setting from config.
     """
     return QUESTIONS_PER_PAGE
+
+
+# =============================================================================
+# BACKUP MANAGEMENT COMMANDS
+# =============================================================================
+
+@router.message(Command("backup"))
+async def cmd_create_backup(message: Message, bot: Bot):
+    """Create manual backup and send to configured recipient."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+
+    status_msg = await message.answer("🔄 Создаю резервную копию...")
+
+    try:
+        from utils.telegram_backup import create_and_send_backup
+
+        # Send to configured recipient (must be set in .env)
+        success = await create_and_send_backup(BACKUP_RECIPIENT_ID, bot)
+
+        if success:
+            if BACKUP_RECIPIENT_ID == message.from_user.id:
+                await status_msg.edit_text(
+                    "✅ Резервная копия создана и отправлена вам в личные сообщения!\n\n"
+                    "📁 Проверьте входящие файлы в этом чате"
+                )
+            else:
+                await status_msg.edit_text(
+                    f"✅ Резервная копия создана и отправлена пользователю {BACKUP_RECIPIENT_ID}\n\n"
+                    f"📁 Файл содержит базу данных и логи бота"
+                )
+        else:
+            await status_msg.edit_text(
+                "❌ Ошибка создания или отправки резервной копии\n\n"
+                "📋 Проверьте логи бота для получения подробной информации"
+            )
+
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Критическая ошибка при создании бекапа: {e}")
+        logger.error(f"Backup command failed: {e}")
+
+
+@router.message(Command("backup_me"))
+async def cmd_backup_to_me(message: Message, bot: Bot):
+    """Create backup and send directly to current admin user."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+
+    status_msg = await message.answer("🔄 Создаю персональную резервную копию...")
+
+    try:
+        from utils.telegram_backup import create_and_send_backup
+
+        success = await create_and_send_backup(message.from_user.id, bot)
+
+        if success:
+            await status_msg.edit_text(
+                "✅ Персональная резервная копия отправлена!\n\n"
+                "📁 Файл содержит:\n"
+                "• Полную базу данных бота\n"
+                "• Последние записи логов\n"
+                "• Инструкции по восстановлению\n\n"
+                "⚠️ Храните файл в безопасном месте"
+            )
+        else:
+            await status_msg.edit_text(
+                "❌ Ошибка создания персональной резервной копии\n\n"
+                "Попробуйте позже или проверьте логи"
+            )
+
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Ошибка: {e}")
+        logger.error(f"Personal backup command failed: {e}")
+
+
+@router.message(Command("backup_to"))
+async def cmd_backup_to_user(message: Message, bot: Bot):
+    """Send backup to specific user ID."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+
+    # Parse user ID from command arguments
+    try:
+        command_parts = message.text.split()
+        if len(command_parts) != 2:
+            await message.answer(
+                "❌ Неверный формат команды\n\n"
+                "📝 Используйте: /backup_to USER_ID\n"
+                "📝 Пример: /backup_to 123456789\n\n"
+                "💡 Для получения ID используйте @userinfobot"
+            )
+            return
+
+        recipient_id = int(command_parts[1])
+
+        # Validate user ID format
+        if recipient_id <= 0:
+            await message.answer("❌ ID пользователя должен быть положительным числом")
+            return
+
+    except ValueError:
+        await message.answer(
+            "❌ Некорректный ID пользователя\n\n"
+            "ID должен быть числом, например: 123456789"
+        )
+        return
+
+    status_msg = await message.answer(f"🔄 Создаю резервную копию для пользователя {recipient_id}...")
+
+    try:
+        from utils.telegram_backup import create_and_send_backup
+
+        success = await create_and_send_backup(recipient_id, bot)
+
+        if success:
+            await status_msg.edit_text(
+                f"✅ Резервная копия отправлена пользователю {recipient_id}\n\n"
+                f"📁 Файл содержит полную базу данных и логи\n"
+                f"📋 Включены инструкции по восстановлению"
+            )
+        else:
+            await status_msg.edit_text(
+                f"❌ Ошибка отправки резервной копии пользователю {recipient_id}\n\n"
+                "Возможные причины:\n"
+                "• Пользователь заблокировал бота\n"
+                "• Неверный ID пользователя\n"
+                "• Ошибка создания архива"
+            )
+
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Ошибка: {e}")
+        logger.error(f"Backup to user {recipient_id} failed: {e}")
+
+
+@router.message(Command("backup_info"))
+async def cmd_backup_info(message: Message):
+    """Show backup system information and status."""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer(ERROR_ADMIN_ONLY)
+        return
+
+    try:
+        from config import BACKUP_ENABLED, BACKUP_RECIPIENT_ID, BACKUP_STORAGE_DIR
+
+        # Format backup information
+        info_text = "📦 Информация о системе резервного копирования\n\n"
+
+        # System status
+        status_emoji = "✅" if BACKUP_ENABLED else "❌"
+        info_text += f"{status_emoji} Статус: {'Включена' if BACKUP_ENABLED else 'Отключена'}\n"
+
+        if BACKUP_ENABLED:
+            info_text += f"👤 Получатель: {BACKUP_RECIPIENT_ID}\n"
+            info_text += f"📁 Временное хранение: {BACKUP_STORAGE_DIR}\n"
+            info_text += f"⏰ Расписание: Каждые 24 часа\n\n"
+
+            info_text += "📋 Содержимое бекапа:\n"
+            info_text += "• База данных бота (database.db)\n"
+            info_text += "• Последние логи (100KB)\n"
+            info_text += "• Статистика таблиц БД\n"
+            info_text += "• Инструкции по восстановлению\n\n"
+
+            info_text += "🔧 Доступные команды:\n"
+            info_text += "• /backup - создать бекап для настроенного получателя\n"
+            info_text += "• /backup_me - создать бекап для себя\n"
+            info_text += "• /backup_to ID - отправить бекап пользователю\n"
+            info_text += "• /backup_info - эта информация\n\n"
+
+            info_text += "⚠️ Важно:\n"
+            info_text += "• Бекапы отправляются через Telegram\n"
+            info_text += "• Максимальный размер файла: 50MB\n"
+            info_text += "• Локальные копии удаляются после отправки"
+        else:
+            info_text += "\n⚙️ Для включения установите в .env:\n"
+            info_text += "BACKUP_ENABLED=true\n"
+            info_text += "BACKUP_RECIPIENT_ID=ваш_telegram_id"
+
+        await message.answer(info_text)
+        logger.info(f"Admin {message.from_user.id} viewed backup information")
+
+    except Exception as e:
+        await message.answer("❌ Ошибка получения информации о бекапах")
+        logger.error(f"Error getting backup info: {e}")

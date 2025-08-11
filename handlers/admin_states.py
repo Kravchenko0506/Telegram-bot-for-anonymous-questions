@@ -70,7 +70,7 @@ def cleanup_expired_states():
         del admin_answer_states[admin_id]
 
 
-async def start_answer_mode(callback: CallbackQuery, question_id: int):
+async def start_answer_mode(callback: CallbackQuery, question_id: int, question=None):
     """
     Initialize interactive answer mode for admin.
 
@@ -79,7 +79,9 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int):
     - Sets up answer state
     - Sends answer interface
     - Handles errors
-
+    - Accepts an optional question object to prevent
+    creating multiple database sessions for the same operation.
+    
     Features:
     - Question validation
     - State initialization
@@ -97,6 +99,7 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int):
     Args:
         callback: Telegram callback query
         question_id: Question identifier
+        question: Optional Question object from existing session
     """
     admin_id = callback.from_user.id
 
@@ -104,10 +107,20 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int):
         # Clean up any expired states
         cleanup_expired_states()
 
-        # Get question details
-        async with async_session() as session:
-            question = await session.get(Question, question_id)
-            if not question or question.is_deleted:
+        # If question object not provided, get it from database
+        if question is None:
+            async with async_session() as session:
+                question = await session.get(Question, question_id)
+                if not question or question.is_deleted:
+                    await callback.answer("❌ Вопрос не найден", show_alert=True)
+                    return
+
+                if question.is_answered:
+                    await callback.answer("❌ На этот вопрос уже дан ответ", show_alert=True)
+                    return
+        else:
+            # Use provided question object - no database query needed
+            if question.is_deleted:
                 await callback.answer("❌ Вопрос не найден", show_alert=True)
                 return
 
