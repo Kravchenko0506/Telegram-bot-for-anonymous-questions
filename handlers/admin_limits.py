@@ -24,6 +24,64 @@ from utils.logging_setup import get_logger
 router = Router()
 logger = get_logger(__name__)
 
+# Конфигурация команд для управления лимитами
+LIMIT_COMMANDS = {
+    "rate_limit": {
+        "command": "set_rate_limit",
+        "getter": SettingsManager.get_rate_limit_per_hour,
+        "setter": SettingsManager.set_rate_limit_per_hour,
+        "range": (1, 100),
+        "unit": "",
+        "name": "Лимит вопросов",
+        "description": "вопросов в час"
+    },
+    "cooldown": {
+        "command": "set_cooldown",
+        "getter": SettingsManager.get_rate_limit_cooldown,
+        "setter": SettingsManager.set_rate_limit_cooldown,
+        "range": (0, 3600),
+        "unit": "сек",
+        "name": "Задержка",
+        "description": "секунд"
+    },
+    "max_question": {
+        "command": "set_max_question",
+        "getter": SettingsManager.get_max_question_length,
+        "setter": SettingsManager.set_max_question_length,
+        "range": (10, 10000),
+        "unit": "символов",
+        "name": "Максимальная длина вопроса",
+        "description": "символов"
+    },
+    "max_answer": {
+        "command": "set_max_answer",
+        "getter": SettingsManager.get_max_answer_length,
+        "setter": SettingsManager.set_max_answer_length,
+        "range": (10, 10000),
+        "unit": "символов",
+        "name": "Максимальная длина ответа",
+        "description": "символов"
+    },
+    "per_page": {
+        "command": "set_per_page",
+        "getter": SettingsManager.get_questions_per_page,
+        "setter": SettingsManager.set_questions_per_page,
+        "range": (1, 50),
+        "unit": "",
+        "name": "Вопросов на странице",
+        "description": "вопросов на странице"
+    },
+    "max_pages": {
+        "command": "set_max_pages",
+        "getter": SettingsManager.get_max_pages_to_show,
+        "setter": SettingsManager.set_max_pages_to_show,
+        "range": (10, 1000),
+        "unit": "",
+        "name": "Максимум страниц",
+        "description": "страниц"
+    }
+}
+
 
 @router.message(Command("limits"))
 async def limits_command(message: Message):
@@ -41,6 +99,12 @@ async def limits_command(message: Message):
         per_page = await SettingsManager.get_questions_per_page()
         max_pages = await SettingsManager.get_max_pages_to_show()
 
+        commands_list = "\n".join(
+            f"- /{config['command']} Значение - {config['description']} "
+            f"({config['range'][0]}-{config['range'][1]})"
+            for config in LIMIT_COMMANDS.values()
+        )
+
         limits_text = f"""
 ⚙️ <b>Текущие лимиты и ограничения</b>
 
@@ -55,12 +119,7 @@ async def limits_command(message: Message):
 - Максимум страниц: {max_pages}
 
 💡 <b>Команды для изменения:</b>
-- /set_rate_limit <число> - вопросов в час (1-100)
-- /set_cooldown <секунды> - задержка (0-3600)
-- /set_max_question <длина> - макс. вопрос (10-10000)
-- /set_max_answer <длина> - макс. ответ (10-10000)
-- /set_per_page <число> - на странице (1-50)
-- /set_max_pages <число> - макс. страниц (10-1000)
+{commands_list}
 """
         await message.answer(limits_text)
         logger.info(f"Admin {message.from_user.id} viewed limits")
@@ -70,184 +129,46 @@ async def limits_command(message: Message):
         logger.error(f"Error getting limits: {e}")
 
 
-@router.message(Command("set_rate_limit"))
-async def set_rate_limit_command(message: Message):
-    """Set questions per hour limit."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
+async def handle_set_command(message: Message, config: dict):
+    """Общая обработка команд установки лимитов."""
     args = message.text.split(maxsplit=1)
+    min_val, max_val = config["range"]
+    unit = config["unit"]
+    
     if len(args) < 2:
-        current = await SettingsManager.get_rate_limit_per_hour()
+        current = await config["getter"]()
+        unit_text = f" {unit}" if unit else ""
         await message.answer(
-            f"ℹ️ Текущий лимит: <b>{current}</b> вопросов в час\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_rate_limit <i>число от 1 до 100</i>"
+            f"ℹ️ Текущее значение: <b>{current}{unit_text}</b>\n\n"
+            f"📝 Чтобы изменить, отправьте:\n"
+            f"/{config['command']} Значение от {min_val} до {max_val}"
         )
         return
 
     try:
         new_value = int(args[1])
-        if await SettingsManager.set_rate_limit_per_hour(new_value):
+        if await config["setter"](new_value):
+            unit_text = f" {unit}" if unit else ""
             await message.answer(
-                f"✅ Лимит вопросов изменен на {new_value} в час"
+                f"✅ {config['name']} изменено на {new_value}{unit_text}"
             )
-            logger.info(f"Admin updated rate limit to: {new_value}")
+            logger.info(f"Admin updated {config['command']} to: {new_value}")
         else:
-            await message.answer("❌ Неверное значение. Допустимо: 1-100")
+            await message.answer(f"❌ Неверное значение. Допустимо: {min_val}-{max_val}")
     except ValueError:
         await message.answer("❌ Укажите число")
 
 
-@router.message(Command("set_cooldown"))
-async def set_cooldown_command(message: Message):
-    """Set cooldown between questions."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        current = await SettingsManager.get_rate_limit_cooldown()
-        await message.answer(
-            f"ℹ️ Текущая задержка: <b>{current}</b> секунд\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_cooldown <i>секунды от 0 до 3600</i>"
-        )
-        return
-
-    try:
-        new_value = int(args[1])
-        if await SettingsManager.set_rate_limit_cooldown(new_value):
-            await message.answer(
-                f"✅ Задержка изменена на {new_value} секунд"
-            )
-            logger.info(f"Admin updated cooldown to: {new_value}")
-        else:
-            await message.answer("❌ Неверное значение. Допустимо: 0-3600 секунд")
-    except ValueError:
-        await message.answer("❌ Укажите число")
-
-
-@router.message(Command("set_max_question"))
-async def set_max_question_command(message: Message):
-    """Set maximum question length."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        current = await SettingsManager.get_max_question_length()
-        await message.answer(
-            f"ℹ️ Текущий максимум: <b>{current}</b> символов\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_max_question <i>длина от 10 до 10000</i>"
-        )
-        return
-
-    try:
-        new_value = int(args[1])
-        if await SettingsManager.set_max_question_length(new_value):
-            await message.answer(
-                f"✅ Максимальная длина вопроса изменена на {new_value} символов"
-            )
-            logger.info(f"Admin updated max question length to: {new_value}")
-        else:
-            await message.answer("❌ Неверное значение. Допустимо: 10-10000")
-    except ValueError:
-        await message.answer("❌ Укажите число")
-
-
-@router.message(Command("set_max_answer"))
-async def set_max_answer_command(message: Message):
-    """Set maximum answer length."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        current = await SettingsManager.get_max_answer_length()
-        await message.answer(
-            f"ℹ️ Текущий максимум: <b>{current}</b> символов\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_max_answer <i>длина от 10 до 10000</i>"
-        )
-        return
-
-    try:
-        new_value = int(args[1])
-        if await SettingsManager.set_max_answer_length(new_value):
-            await message.answer(
-                f"✅ Максимальная длина ответа изменена на {new_value} символов"
-            )
-            logger.info(f"Admin updated max answer length to: {new_value}")
-        else:
-            await message.answer("❌ Неверное значение. Допустимо: 10-10000")
-    except ValueError:
-        await message.answer("❌ Укажите число")
-
-
-@router.message(Command("set_per_page"))
-async def set_per_page_command(message: Message):
-    """Set questions per page."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        current = await SettingsManager.get_questions_per_page()
-        await message.answer(
-            f"ℹ️ Текущее значение: <b>{current}</b> вопросов на странице\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_per_page <i>число от 1 до 50</i>"
-        )
-        return
-
-    try:
-        new_value = int(args[1])
-        if await SettingsManager.set_questions_per_page(new_value):
-            await message.answer(
-                f"✅ Количество вопросов на странице изменено на {new_value}"
-            )
-            logger.info(f"Admin updated questions per page to: {new_value}")
-        else:
-            await message.answer("❌ Неверное значение. Допустимо: 1-50")
-    except ValueError:
-        await message.answer("❌ Укажите число")
-
-
-@router.message(Command("set_max_pages"))
-async def set_max_pages_command(message: Message):
-    """Set maximum pages to show."""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer(ERROR_ADMIN_ONLY)
-        return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        current = await SettingsManager.get_max_pages_to_show()
-        await message.answer(
-            f"ℹ️ Текущее значение: <b>{current}</b> страниц\n\n"
-            "📝 Чтобы изменить, отправьте:\n"
-            "/set_max_pages <i>число от 10 до 1000</i>"
-        )
-        return
-
-    try:
-        new_value = int(args[1])
-        if await SettingsManager.set_max_pages_to_show(new_value):
-            await message.answer(
-                f"✅ Максимальное количество страниц изменено на {new_value}"
-            )
-            logger.info(f"Admin updated max pages to: {new_value}")
-        else:
-            await message.answer("❌ Неверное значение. Допустимо: 10-1000")
-    except ValueError:
-        await message.answer("❌ Укажите число")
+# Динамическая регистрация обработчиков команд
+for key, config in LIMIT_COMMANDS.items():
+    command = config["command"]
+    
+    @router.message(Command(command))
+    async def set_command_handler(message: Message, config=config):
+        if message.from_user.id != ADMIN_ID:
+            await message.answer(ERROR_ADMIN_ONLY)
+            return
+        await handle_set_command(message, config)
 
 
 @router.message(Command("reset_limits"))

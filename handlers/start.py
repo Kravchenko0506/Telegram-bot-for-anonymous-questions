@@ -29,6 +29,7 @@ from aiogram.filters.command import CommandObject
 
 from config import ADMIN_ID, WELCOME_MESSAGE_TEMPLATE, MAX_QUESTION_LENGTH, BOT_USERNAME
 from utils.logging_setup import get_logger
+from models.settings import SettingsManager
 
 router = Router()
 logger = get_logger(__name__)
@@ -121,10 +122,11 @@ async def start_handler(message: Message, command: CommandObject):
         author_name = await SettingsManager.get_author_name()
         author_info = await SettingsManager.get_author_info()
 
+        max_length = await SettingsManager.get_max_question_length()  
         welcome_text = WELCOME_MESSAGE_TEMPLATE.format(
             author_name=author_name,
             author_info=author_info,
-            max_length=MAX_QUESTION_LENGTH
+            max_length=max_length
         )
 
         await message.answer(welcome_text)

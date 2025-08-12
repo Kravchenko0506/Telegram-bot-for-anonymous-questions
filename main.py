@@ -1,5 +1,4 @@
-"""Main bot launch module.
-"""
+"""Main bot launch module."""
 
 import asyncio
 import signal
@@ -11,7 +10,7 @@ from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeCha
 
 from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
 from models.database import init_db, close_db, check_db_connection
-from handlers import start, questions, admin, admin_states
+from handlers import start, questions, admin, admin_states, admin_limits
 from middlewares.rate_limit import RateLimitMiddleware, CallbackRateLimitMiddleware
 from middlewares.error_handler import ErrorHandlerMiddleware
 from utils.logging_setup import setup_logging, get_logger, capture_error
@@ -58,6 +57,7 @@ ADMIN_COMMANDS: list[tuple[str, str]] = [
     ("set_author", "✏️ Имя автора"),
     ("set_info", "📝 Описание"),
     ("settings", "⚙️ Настройки"),
+    ("limits", "⚖️ Управление лимитами"),
     ("stats", "📊 Статистика"),
     ("pending", "⏳ Неотвеченные"),
     ("favorites", "⭐ Избранные"),
@@ -87,6 +87,7 @@ async def register_handlers(dp: Dispatcher) -> None:
     """Include routers ordered by specificity (states → admin → general)."""
     dp.include_router(admin_states.router)
     dp.include_router(admin.router)
+    dp.include_router(admin_limits.router) 
     dp.include_router(start.router)
     dp.include_router(questions.router)
 

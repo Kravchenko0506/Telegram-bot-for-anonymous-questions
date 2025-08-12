@@ -301,18 +301,44 @@ async def handle_clear_all_questions(callback: CallbackQuery) -> None:
 
 
 # Commands: help & lists
-@router.message(Command("admin"))
+@router.message(Command("start"))
 async def admin_command(message: Message) -> None:
     if message.from_user.id != ADMIN_ID:
         await message.answer(ERROR_ADMIN_ONLY)
         return
+    
     panel = (
-        "🛠 <b>Админ-панель</b>\n\n"
-        "/settings /set_author /set_info\n"
-        "/pending /favorites /answered\n"
-        "/stats /health\n"
-        "/backup /backup_me /backup_to /backup_info\n\n"
-        f"Ссылка: <code>https://t.me/{BOT_USERNAME}?start=channel</code>"
+        "🛠 <b>Админ-панель управления ботом</b>\n\n"
+        
+        "⚙️ <b>Основные настройки:</b>\n"
+        "🏷 /set_author - изменить имя автора\n"
+        "📝 /set_info - изменить описание канала\n"
+        "⚙️ /settings - просмотр настроек\n\n"
+        
+        "⚖️ <b>Управление лимитами:</b>\n"
+        "🔧 /limits - все лимиты и команды\n"
+        "🔢 /set_rate_limit - вопросов в час\n"
+        "⏱ /set_cooldown - задержка между вопросами\n"
+        "📏 /set_max_question - макс. длина вопроса\n"
+        "💬 /set_max_answer - макс. длина ответа\n"
+        "🔄 /reset_limits - сбросить все лимиты\n\n"
+        
+        "📊 <b>Управление вопросами:</b>\n"
+        "⏳ /pending - неотвеченные вопросы\n"
+        "⭐ /favorites - избранные вопросы\n"
+        "✅ /answered - отвеченные вопросы\n"
+        "📈 /stats - статистика бота\n\n"
+        
+        "💾 <b>Резервное копирование:</b>\n"
+        "📦 /backup - отправить бэкап разработчику\n"
+        "👤 /backup_me - отправить бэкап себе\n"
+        "📋 /backup_info - информация о бэкапах\n\n"
+        
+        "🔧 <b>Система:</b>\n"
+        "🩺 /health - состояние бота\n\n"
+        
+        f"🔗 <b>Ссылка для пользователей:</b>\n"
+        f"<code>https://t.me/{BOT_USERNAME}?start=channel</code>"
     )
     await message.answer(panel)
 
