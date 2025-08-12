@@ -30,6 +30,7 @@ from sqlalchemy import text
 
 from config import MAX_QUESTION_LENGTH, MAX_ANSWER_LENGTH
 from utils.logging_setup import get_logger
+from config import ERROR_MESSAGE_TOO_LONG
 
 logger = get_logger(__name__)
 
@@ -153,8 +154,7 @@ class InputValidator:
         # Check minimum length
         max_len = max_length or MAX_QUESTION_LENGTH
         if len(text) > max_len:
-            return False, f"Вопрос слишком длинный (максимум {max_len} символов)"
-
+            return False, ERROR_MESSAGE_TOO_LONG.format(max_length=max_len)
         # Check for spam patterns
         for pattern in InputValidator.SPAM_PATTERNS:
             if pattern.search(text):

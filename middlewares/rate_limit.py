@@ -38,6 +38,7 @@ from config import (
 from utils.logging_setup import get_logger
 from models.settings import SettingsManager
 
+
 logger = get_logger(__name__)
 
 
@@ -162,8 +163,9 @@ class RateLimitMiddleware(BaseMiddleware):
 
             # Check hourly limit for questions
             if not await self._check_hourly_limit(user_id, now):
+                current_limit = await SettingsManager.get_rate_limit_per_hour()
                 await event.answer(
-                    f"❌ Вы превысили лимит вопросов ({self.questions_per_hour} в час). "
+                    f"❌ Вы превысили лимит вопросов ({current_limit} в час). "
                     f"Попробуйте позже."
                 )
                 logger.warning(f"Rate limit hourly hit for user {user_id}")
