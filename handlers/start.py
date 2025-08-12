@@ -87,24 +87,39 @@ async def start_handler(message: Message, command: CommandObject):
 
     # Check if user is admin
     if user_id == ADMIN_ID:
-        admin_panel = f"""
-🛠 <b>Админ-панель бота</b>
-
-📋 <b>Управление настройками:</b>
-• /set_author - Изменить имя автора
-• /set_info - Изменить описание канала
-• /settings - Просмотр текущих настроек
-
-📊 <b>Управление вопросами:</b>
-• /pending - Неотвеченные вопросы
-• /favorites - Избранные вопросы
-• /stats - Статистика
-
-🔗 <b>Ссылка для пользователей:</b>
-<code>https://t.me/{BOT_USERNAME}?start=channel</code>
-
-<i>Пользователи видят только команду /start</i>
-"""
+        admin_panel = (
+                "🛠 <b>Админ-панель управления ботом</b>\n\n"
+                "⚙️ <b>Основные настройки:</b>\n"
+                "🏷 /set_author - изменить имя автора\n"
+                "📝 /set_info - изменить описание канала\n"
+                "⚙️ /settings - просмотр настроек\n\n"
+            
+    
+                "⚖️ <b>Управление лимитами:</b>\n"
+                "🔧 /limits - все лимиты и команды\n"
+                "🔢 /set_rate_limit - вопросов в час\n"
+                "⏱ /set_cooldown - задержка между вопросами\n"
+                "📏 /set_max_question - макс. длина вопроса\n"
+                "💬 /set_max_answer - макс. длина ответа\n"
+                "🔄 /reset_limits - сбросить все лимиты\n\n"
+                
+                "📊 <b>Управление вопросами:</b>\n"
+                "⏳ /pending - неотвеченные вопросы\n"
+                "⭐ /favorites - избранные вопросы\n"
+                "✅ /answered - отвеченные вопросы\n"
+                "📈 /stats - статистика бота\n\n"
+                
+                "💾 <b>Резервное копирование:</b>\n"
+                "📦 /backup - отправить бэкап разработчику\n"
+                "👤 /backup_me - отправить бэкап себе\n"
+                "📋 /backup_info - информация о бэкапах\n\n"
+                
+                "🔧 <b>Система:</b>\n"
+                "🩺 /health - состояние бота\n\n"
+                
+                "🔗 <b>Ссылка для пользователей:</b>\n"
+                "f<code>https://t.me/{BOT_USERNAME}?start=channel</code>"
+            )
 
         await message.answer(admin_panel)
         logger.info(f"Admin {user_id} accessed simplified admin panel")
@@ -122,7 +137,7 @@ async def start_handler(message: Message, command: CommandObject):
         author_name = await SettingsManager.get_author_name()
         author_info = await SettingsManager.get_author_info()
 
-        max_length = await SettingsManager.get_max_question_length()  
+        max_length = await SettingsManager.get_max_question_length()
         welcome_text = WELCOME_MESSAGE_TEMPLATE.format(
             author_name=author_name,
             author_info=author_info,

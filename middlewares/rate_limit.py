@@ -148,7 +148,7 @@ class RateLimitMiddleware(BaseMiddleware):
             # Skip cooldown for first question
             if not is_first_question:
                 if not await self._check_question_cooldown(user_id, now):
-                    remaining = self._get_cooldown_remaining(user_id)
+                    remaining = await self._get_cooldown_remaining(user_id)
                     await event.answer(
                         ERROR_RATE_LIMIT.format(seconds=remaining)
                     )
@@ -224,31 +224,23 @@ class RateLimitMiddleware(BaseMiddleware):
         if not last_question:
             return True
 
+        from models.settings import SettingsManager
+        current_cooldown = await SettingsManager.get_rate_limit_cooldown()
+
         time_passed = (now - last_question).total_seconds()
-        return time_passed >= self.cooldown_seconds
+        return time_passed >= current_cooldown
 
-    def _get_cooldown_remaining(self, user_id: int) -> int:
-        """
-        Calculate remaining cooldown time.
-
-        This method:
-        - Gets last question time
-        - Calculates remaining time
-        - Handles edge cases
-
-        Args:
-            user_id: Telegram user identifier
-
-        Returns:
-            int: Seconds remaining in cooldown
-        """
+    async def _get_cooldown_remaining(self, user_id: int) -> int:
         last_question = self.user_last_question.get(user_id)
         if not last_question:
             return 0
 
+        from models.settings import SettingsManager
+        current_cooldown = await SettingsManager.get_rate_limit_cooldown()
+
         now = datetime.now()
         time_passed = (now - last_question).total_seconds()
-        remaining = self.cooldown_seconds - time_passed
+        remaining = current_cooldown - time_passed
 
         return max(0, int(remaining))
 
@@ -286,7 +278,7 @@ class RateLimitMiddleware(BaseMiddleware):
         self.user_questions[user_id].append(now)
         return True
 
-    def get_user_stats(self, user_id: int) -> Dict[str, Any]:
+    async def get_user_stats(self, user_id: int) -> Dict[str, Any]:
         """
         Retrieve comprehensive user statistics.
 
@@ -313,7 +305,7 @@ class RateLimitMiddleware(BaseMiddleware):
         ])
 
         # Get cooldown status
-        cooldown_remaining = self._get_cooldown_remaining(user_id)
+        cooldown_remaining = await self._get_cooldown_remaining(user_id)
 
         # Check if user has sent first question
         has_sent_first = user_id in self.user_has_sent_first_question
