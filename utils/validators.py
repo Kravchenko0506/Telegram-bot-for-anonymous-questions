@@ -26,6 +26,8 @@ import re
 import html
 from typing import Optional, Tuple, Dict
 
+from sqlalchemy import text
+
 from config import MAX_QUESTION_LENGTH, MAX_ANSWER_LENGTH
 from utils.logging_setup import get_logger
 
@@ -122,7 +124,7 @@ class InputValidator:
         return text
 
     @staticmethod
-    def validate_question(text: str) -> Tuple[bool, Optional[str]]:
+    def validate_question(text: str, max_length: int = None) -> Tuple[bool, Optional[str]]:  # ✅
         """
         Validate question text with comprehensive checks.
 
@@ -149,8 +151,9 @@ class InputValidator:
             return False, f"Вопрос слишком длинный (максимум {MAX_QUESTION_LENGTH} символов)"
 
         # Check minimum length
-        if len(text.strip()) < 5:
-            return False, "Вопрос слишком короткий (минимум 5 символов)"
+        max_len = max_length or MAX_QUESTION_LENGTH
+        if len(text) > max_len:
+            return False, f"Вопрос слишком длинный (максимум {max_len} символов)"
 
         # Check for spam patterns
         for pattern in InputValidator.SPAM_PATTERNS:

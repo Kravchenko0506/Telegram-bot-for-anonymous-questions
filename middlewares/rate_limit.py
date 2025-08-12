@@ -36,6 +36,7 @@ from config import (
     ADMIN_ID
 )
 from utils.logging_setup import get_logger
+from models.settings import SettingsManager
 
 logger = get_logger(__name__)
 
@@ -270,7 +271,8 @@ class RateLimitMiddleware(BaseMiddleware):
 
         # Check limit
         questions_count = len(self.user_questions[user_id])
-        if questions_count >= self.questions_per_hour:
+        current_limit = await SettingsManager.get_rate_limit_per_hour()
+        if questions_count >= current_limit:
             self.user_violations[user_id] += 1
             return False
 

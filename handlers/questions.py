@@ -46,6 +46,7 @@ from keyboards.inline import (
 )
 from utils.logging_setup import get_logger
 from sqlalchemy import select
+from models.settings import SettingsManager
 
 router = Router()
 logger = get_logger(__name__)
@@ -252,11 +253,11 @@ async def handle_user_question(message: Message):
         return
 
     # Sanitize input
-    question_text = InputValidator.sanitize_text(
-        message.text, MAX_QUESTION_LENGTH)
+    max_length = await SettingsManager.get_max_question_length()
+    question_text = InputValidator.sanitize_text(message.text, max_length)
 
     # Validate question
-    is_valid, error_message = InputValidator.validate_question(question_text)
+    is_valid, error_message = InputValidator.validate_question(question_text, max_length)
 
     if not is_valid:
         await message.answer(f"❌ {error_message}")
