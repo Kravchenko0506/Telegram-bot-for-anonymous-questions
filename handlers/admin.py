@@ -256,7 +256,7 @@ async def show_questions_page(
                 body = f"⭐ <b>Вопрос #{q['id']}</b>\n\n{text}\n\n📅 {created} | {status}"
                 if q["answer"]:
                     body += f"\n\n💬 <b>Ответ:</b>\n{q['answer']}"
-                kb = get_favorite_question_keyboard(q["id"])
+                kb = get_favorite_question_keyboard(q["id"], is_answered=bool(q["answer"]))
             else:  # answered
                 fav = "⭐ " if q["is_favorite"] else ""
                 body = (

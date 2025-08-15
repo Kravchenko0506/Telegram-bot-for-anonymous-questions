@@ -32,22 +32,7 @@ def get_env_var(key: str, default: Optional[str] = None, required: bool = True) 
     """
     Retrieve and validate environment variables with comprehensive error handling.
 
-    This function provides a robust way to:
-    - Load environment variables
-    - Handle missing variables
-    - Provide default values
-    - Validate requirements
-
-    Args:
-        key: Name of the environment variable to retrieve
-        default: Default value if variable is not found
-        required: Whether the variable must be present
-
-    Returns:
-        str: The value of the environment variable
-
-    Raises:
-        ValueError: If a required variable is missing
+   
     """
     value = os.getenv(key, default)
 
@@ -66,16 +51,6 @@ def get_env_int(key: str, default: Optional[int] = None, required: bool = True) 
     Get integer environment variable with robust error handling.
     Handles various hosting platform quirks.
 
-    Args:
-        key: Name of the environment variable
-        default: Default integer value if variable is not found
-        required: Whether the variable must be present
-
-    Returns:
-        int: The integer value of the environment variable
-
-    Raises:
-        ValueError: If value cannot be converted to integer with detailed message
     """
     value = get_env_var(
         key, str(default) if default is not None else None, required)
