@@ -1,25 +1,6 @@
 """
 Start Command Handler
 
-A comprehensive handler for the /start command that provides different
-functionality for admin and regular users with dynamic configuration.
-
-Features:
-- Admin panel access
-- User welcome messages
-- Dynamic settings
-- State management
-- Error handling
-- User tracking
-- Logging support
-
-Technical Features:
-- Role-based access
-- Dynamic configuration
-- State management
-- Error recovery
-- User analytics
-- Logging integration
 """
 
 from aiogram import Router
@@ -39,44 +20,8 @@ logger = get_logger(__name__)
 async def start_handler(message: Message, command: CommandObject):
     """
     Process /start command with comprehensive functionality.
-
-    This handler provides:
-    - Role-based responses (admin/user)
-    - Dynamic configuration
-    - State management
-    - User tracking
-    - Error handling
-
-    Features:
-    - Admin panel for administrators
-    - Welcome message for users
-    - Dynamic settings integration
-    - State reset functionality
-    - User tracking support
-    - Error recovery
-
-    Flow:
-    1. Identify user role
-    2. For admin:
-       - Show admin panel with commands
-       - Log admin access
-    3. For users:
-       - Reset user state
-       - Load dynamic settings
-       - Show welcome message
-       - Track user source
-
-    Args:
-        message: Telegram message object
-        command: Command object with arguments
-
-    Technical Details:
-    - Handles circular imports
-    - Provides fallback messages
-    - Implements error recovery
-    - Maintains user state
-    - Tracks user sources
     """
+
     user_id = message.from_user.id
     unique_id = command.args if command.args else None
 

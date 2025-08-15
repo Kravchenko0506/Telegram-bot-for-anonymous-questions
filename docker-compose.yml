@@ -1,5 +1,3 @@
-
-
 services:
   bot:
     build: .
@@ -8,12 +6,17 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data        # Persist SQLite database
-      - ./logs:/app/logs        # Persist logs
-    environment:
-      - TZ=Europe/Moscow        # Set your timezone
-    networks:
-      - bot-network
+      - .:/app
+      - bot_database:/data 
+      - ./data:/data # Persist SQLite database
+      - ./logs:/logs # Persist logs
+
+    mem_limit: 128m
+    cpus: 0.3
+    mem_reservation: 32m
+
+volumes:
+  bot_database:
 
 networks:
   bot-network:

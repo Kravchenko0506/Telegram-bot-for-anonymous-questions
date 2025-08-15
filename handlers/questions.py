@@ -23,6 +23,7 @@ Technical Features:
 - Logging system
 """
 
+from email.mime import message
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from datetime import datetime
@@ -252,19 +253,21 @@ async def handle_user_question(message: Message):
         logger.warning(f"Empty question attempt from user {user_id}")
         return
 
-    # Sanitize input
-    max_length = await SettingsManager.get_max_question_length()
-    question_text = InputValidator.sanitize_text(message.text, max_length)
-
     # Validate question
-    is_valid, error_message = InputValidator.validate_question(question_text, max_length)
+    
+    max_length = await SettingsManager.get_max_question_length()
+    is_valid, error_message = InputValidator.validate_question(message.text, max_length)
+
+    # Sanitize input
 
     if not is_valid:
         await message.answer(f"❌ {error_message}")
         logger.warning(
             f"Invalid question from user {user_id}: {error_message}")
         return
-
+    
+    question_text = InputValidator.sanitize_text(message.text, max_length)
+    
     # Check for spam
     if ContentModerator.is_likely_spam(question_text):
         await message.answer(
