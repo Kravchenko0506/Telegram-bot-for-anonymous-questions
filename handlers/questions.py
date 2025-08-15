@@ -58,26 +58,6 @@ async def user_callback_handler(callback: CallbackQuery):
     """
     Process user callback queries for question flow.
 
-    This handler:
-    - Validates user permissions
-    - Manages state transitions
-    - Provides user feedback
-    - Handles errors
-
-    Features:
-    - State management
-    - Error handling
-    - User feedback
-    - Activity logging
-
-    Flow:
-    1. Validate user
-    2. Process callback
-    3. Update state
-    4. Provide feedback
-
-    Args:
-        callback: Telegram callback query
     """
     user_id = callback.from_user.id
 
@@ -93,9 +73,10 @@ async def user_callback_handler(callback: CallbackQuery):
             success = await UserStateManager.allow_new_question(user_id)
 
             if success:
+                max_length = await SettingsManager.get_max_question_length()
                 await callback.message.edit_text(
                     "✍️ <b>Напишите ваш новый вопрос:</b>\n\n"
-                    f"<i>Максимальная длина: {MAX_QUESTION_LENGTH} символов</i>",
+                    f"<i>Максимальная длина: {max_length} символов</i>",
                     reply_markup=None
                 )
                 await callback.answer("Теперь можете написать новый вопрос")
@@ -118,27 +99,6 @@ async def unified_message_handler(message: Message):
     """
     Unified message processing system with role-based routing.
 
-    This handler provides:
-    - Role-based processing
-    - State validation
-    - Message routing
-    - Error handling
-
-    Features:
-    - Admin mode detection
-    - State management
-    - Message routing
-    - Error handling
-    - Activity logging
-
-    Flow:
-    1. Identify user role
-    2. Check user state
-    3. Route message
-    4. Process accordingly
-
-    Args:
-        message: Telegram message
     """
     user_id = message.from_user.id
 
@@ -170,27 +130,6 @@ async def handle_user_message(message: Message):
     """
     Process user messages with state validation.
 
-    This function:
-    - Validates user state
-    - Manages permissions
-    - Provides feedback
-    - Handles errors
-
-    Features:
-    - State validation
-    - Permission checking
-    - User feedback
-    - Error handling
-    - Activity logging
-
-    Flow:
-    1. Check user state
-    2. Validate permissions
-    3. Process message
-    4. Provide feedback
-
-    Args:
-        message: User's Telegram message
     """
     user_id = message.from_user.id
 
@@ -221,29 +160,6 @@ async def handle_user_question(message: Message):
     """
     Process and validate user questions.
 
-    This function provides:
-    - Input validation
-    - Content moderation
-    - Privacy protection
-    - Database persistence
-    - Admin notification
-
-    Features:
-    - Text sanitization
-    - Spam detection
-    - PII detection
-    - State management
-    - Error handling
-
-    Flow:
-    1. Validate input
-    2. Sanitize content
-    3. Check for spam
-    4. Save question
-    5. Notify admin
-
-    Args:
-        message: User's question message
     """
     user_id = message.from_user.id
 
