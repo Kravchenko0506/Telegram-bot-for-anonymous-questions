@@ -87,7 +87,7 @@ async def register_handlers(dp: Dispatcher) -> None:
     """Include routers ordered by specificity (states → admin → general)."""
     dp.include_router(admin_states.router)
     dp.include_router(admin.router)
-    dp.include_router(admin_limits.router) 
+    dp.include_router(admin_limits.router)
     dp.include_router(start.router)
     dp.include_router(questions.router)
 

@@ -28,9 +28,8 @@ from typing import Optional, Tuple, Dict
 
 from sqlalchemy import text
 
-from config import MAX_QUESTION_LENGTH, MAX_ANSWER_LENGTH
+from config import MAX_QUESTION_LENGTH, MAX_ANSWER_LENGTH, ERROR_MESSAGE_TOO_LONG
 from utils.logging_setup import get_logger
-from config import ERROR_MESSAGE_TOO_LONG
 
 logger = get_logger(__name__)
 
@@ -125,7 +124,8 @@ class InputValidator:
         return text
 
     @staticmethod
-    def validate_question(text: str, max_length: int = None) -> Tuple[bool, Optional[str]]:  # ✅
+    # ✅
+    def validate_question(text: str, max_length: int = None) -> Tuple[bool, Optional[str]]:
         """
         Validate question text with comprehensive checks.
 
@@ -147,12 +147,9 @@ class InputValidator:
         if not text or not text.strip():
             return False, "Вопрос не может быть пустым"
 
-        # Check length
-        if len(text) > MAX_QUESTION_LENGTH:
-            return False, f"Вопрос слишком длинный (максимум {MAX_QUESTION_LENGTH} символов)"
-
-        # Check minimum length
-        max_len = max_length or MAX_QUESTION_LENGTH
+        # Length check against effective limit: DB value has priority, fallback to default
+        max_len = max_length if (isinstance(
+            max_length, int) and max_length > 0) else MAX_QUESTION_LENGTH
         if len(text) > max_len:
             return False, ERROR_MESSAGE_TOO_LONG.format(max_length=max_len)
         # Check for spam patterns
