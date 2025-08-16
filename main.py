@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 
-from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
+from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN, BOT_USERNAME
 from models.database import init_db, close_db, check_db_connection
 from handlers import start, questions, admin, admin_states, admin_limits
 from middlewares.rate_limit import RateLimitMiddleware, CallbackRateLimitMiddleware
@@ -20,6 +20,7 @@ setup_logging()
 logger = get_logger(__name__)
 
 _shutdown_flag = asyncio.Event()
+_bot_username = None
 
 
 def _install_signals() -> None:
@@ -101,11 +102,22 @@ async def _notify_admin(bot: Bot, text: str) -> None:
 async def on_startup(bot: Bot) -> None:
     """Startup hook: check DB connectivity, start periodic tasks, notify admin."""
     logger.info("Стартую сервисы...")
+
+    # Detect and cache actual bot username at startup
+    global _bot_username
+    bot_info = await bot.get_me()
+    _bot_username = bot_info.username
+    logger.info(f"🤖 Bot detected: @{_bot_username}")
+
     if not await check_db_connection():
         raise RuntimeError("Нет подключения к БД")
     await start_periodic_tasks()
-    info = await bot.get_me()
-    await _notify_admin(bot, f"✅ Бот запущен: @{info.username}")
+    await _notify_admin(bot, f"✅ Бот запущен: @{_bot_username}")
+
+
+def get_bot_username() -> str:
+    """Get actual bot username (auto-detected at startup)"""
+    return _bot_username or BOT_USERNAME
 
 
 async def on_shutdown(bot: Bot) -> None:

@@ -1,23 +1,6 @@
 """
 Configuration Management System
 
-A comprehensive configuration system for the Anonymous Questions Bot that handles:
-- Environment variable management
-- Database configuration
-- Bot settings and limits
-- Message templates
-- Security parameters
-- External service integration
-- Dynamic settings
-
-Features:
-- Environment variable validation
-- Type conversion
-- Default value handling
-- Configuration validation
-- Secure credential management
-- Internationalization support
-- Dynamic runtime configuration
 """
 
 import os
@@ -82,7 +65,7 @@ TOKEN: str = get_env_var("BOT_TOKEN")
 ADMIN_ID: int = get_env_int("ADMIN_ID")
 """Telegram user ID of the bot administrator"""
 
-BOT_USERNAME: str = get_env_var("BOT_USERNAME")
+BOT_USERNAME: str = get_env_var("BOT_USERNAME", default="unknown", required=False)
 """Bot username for generating links (without @)"""
 
 # Pagination Settings
@@ -262,40 +245,16 @@ USER_QUESTION_PROCESSING: str = "⏳ Ваш вопрос отправлен и �
 
 
 def get_bot_link(unique_id: str) -> str:
-    """
-    Generate a deep link to the bot with tracking parameters.
-
-    Creates a properly formatted Telegram bot link that includes:
-    - Bot username
-    - Start parameter for tracking
-    - UTM parameters if configured
-
-    Args:
-        unique_id: Tracking identifier for the link
-
-    Returns:
-        str: Complete bot deep link URL
-    """
-    return f"https://t.me/{BOT_USERNAME}?start={unique_id}"
+    """Generate bot deep link with auto-detected username"""
+    from main import get_bot_username  
+    username = get_bot_username()
+    return f"https://t.me/{username}?start={unique_id}"
 
 
 def validate_config() -> bool:
     """
     Perform comprehensive validation of all configuration parameters.
 
-    Validates:
-    - Required environment variables
-    - Variable types and formats
-    - Value ranges and constraints
-    - Security requirements
-    - Database configuration
-    - External service settings
-
-    Returns:
-        bool: True if all validation checks pass
-
-    Raises:
-        ValueError: If any configuration parameter is invalid
     """
     errors = []
 
