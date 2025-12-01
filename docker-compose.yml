@@ -1,0 +1,28 @@
+services:
+  bot:
+    build: .
+    container_name: anon-questions-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /data:/data
+      - ./logs:/app/logs
+    networks:
+      - bot-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
+        reservations:
+          memory: 32M
+
+volumes:
+  persistent_data:
+    driver: local
+
+networks:
+  bot-network:
+    driver: bridge

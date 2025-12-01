@@ -1,0 +1,6 @@
+
+# Code quality
+flake8==7.1.0
+mypy==1.10.1
+isort==5.13.2
+black==24.4.2 
