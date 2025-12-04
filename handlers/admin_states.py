@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime
 
 from config import USER_ANSWER_RECEIVED
@@ -11,7 +12,7 @@ from models.database import async_session
 from models.questions import Question
 from models.admin_state import AdminStateManager
 from models.user_states import UserStateManager
-from utils.logging_setup import get_logger
+from utils. logging_setup import get_logger
 from keyboards.inline import get_cancel_answer_keyboard, get_user_question_sent_keyboard
 
 router = Router()
@@ -25,12 +26,17 @@ def _preview_text(text: str, max_len: int = 100) -> str:
 
 async def is_admin_in_answer_mode(admin_id: int) -> bool:
     """Check if admin is currently in answer mode."""
-    return await AdminStateManager.is_in_state(admin_id, AdminStateManager.STATE_ANSWERING)
+    return await AdminStateManager. is_in_state(admin_id, AdminStateManager.STATE_ANSWERING)
 
 
 async def start_answer_mode(callback: CallbackQuery, question_id: int, question: Optional[Question] = None) -> None:
     """Start answer mode for a question."""
-    admin_id = callback.from_user.id
+    admin_id = callback. from_user.id
+
+    try:
+        await callback.answer("💡 Введите ответ в следующем сообщении")
+    except TelegramBadRequest:
+        pass  
 
     try:
         if question is None:
@@ -38,11 +44,11 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int, question:
                 question = await session.get(Question, question_id)
 
         if not question or question.is_deleted:
-            await callback.answer("❌ Вопрос не найден", show_alert=True)
+            await callback. message.answer("❌ Вопрос не найден")
             return
 
         if question.is_answered:
-            await callback.answer("❌ Уже отвечен", show_alert=True)
+            await callback.message.answer("❌ Уже отвечен")
             return
 
         state_data = {
@@ -53,7 +59,7 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int, question:
 
         await AdminStateManager.set_state(
             admin_id=admin_id,
-            state_type=AdminStateManager.STATE_ANSWERING,
+            state_type=AdminStateManager. STATE_ANSWERING,
             state_data=state_data,
             expiration_minutes=30
         )
@@ -66,25 +72,27 @@ async def start_answer_mode(callback: CallbackQuery, question_id: int, question:
             "<i>⏰ Режим ответа отключится через 30 минут</i>",
             reply_markup=get_cancel_answer_keyboard(question_id)
         )
-        await callback.answer("💡 Введите ответ в следующем сообщении")
 
     except Exception as e:
         await AdminStateManager.clear_state(admin_id)
-        await callback.answer("❌ Ошибка входа в режим ответа", show_alert=True)
         logger.error(f"Error starting answer mode: {e}")
+        try:
+            await callback.message.answer("❌ Ошибка входа в режим ответа")
+        except Exception:
+            pass
 
 
 async def handle_admin_answer(message: Message) -> bool:
     """Process admin's answer to a question."""
-    admin_id = message.from_user.id
+    admin_id = message.from_user. id
 
-    state = await AdminStateManager.get_state(admin_id)
+    state = await AdminStateManager. get_state(admin_id)
     if not state or state.get('type') != AdminStateManager.STATE_ANSWERING:
         return False
 
-    answer_text = message.text.strip()
+    answer_text = message.text. strip()
     if not answer_text:
-        await message.answer("❌ Ответ не может быть пустым")
+        await message. answer("❌ Ответ не может быть пустым")
         return True
 
     data = state['data']
@@ -96,7 +104,7 @@ async def handle_admin_answer(message: Message) -> bool:
 
     try:
         async with async_session() as session:
-            question = await session.get(Question, question_id)
+            question = await session. get(Question, question_id)
             if not question or question.is_answered:
                 await message.answer("❌ Вопрос недоступен")
                 return True
@@ -121,8 +129,8 @@ async def handle_admin_answer(message: Message) -> bool:
         preview_a = _preview_text(answer_text)
 
         if user_notified:
-            await message.answer(
-                f"✅ <b>Ответ отправлен!</b>\n\n"
+            await message. answer(
+                f"✅ <b>Ответ отправлен! </b>\n\n"
                 f"<b>Вопрос:</b> {preview_q}\n"
                 f"<b>Ответ:</b> {preview_a}\n\n"
                 f"<i>Доставлено анонимно</i>"
@@ -146,7 +154,7 @@ async def handle_admin_answer(message: Message) -> bool:
 async def cancel_answer_mode(source: Union[CallbackQuery, Message]) -> None:
     """Cancel answer mode from CallbackQuery or Message."""
     if isinstance(source, CallbackQuery):
-        admin_id = source.from_user.id
+        admin_id = source. from_user.id
         callback = source
         message = source.message
     elif isinstance(source, Message):
@@ -156,6 +164,12 @@ async def cancel_answer_mode(source: Union[CallbackQuery, Message]) -> None:
     else:
         return
 
+    if callback:
+        try:
+            await callback.answer("Отменено")
+        except TelegramBadRequest:
+            pass
+
     was_active = await AdminStateManager.get_state(admin_id)
     await AdminStateManager.clear_state(admin_id)
 
@@ -164,9 +178,5 @@ async def cancel_answer_mode(source: Union[CallbackQuery, Message]) -> None:
             await message.edit_text("❌ Режим ответа отменен", reply_markup=None)
         except Exception:
             await message.answer("❌ Режим ответа отменен")
-
-        if callback:
-            await callback.answer("Отменено")
-    else:
-        if callback:
-            await callback.answer("Режим ответа не активен")
+    elif not callback:
+        await message.answer("Режим ответа не активен")

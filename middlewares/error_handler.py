@@ -56,6 +56,10 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         """Process error: log, notify user, alert admin if critical."""
         context = self._extract_context(event)
 
+        if isinstance(error, TelegramBadRequest) and "query is too old" in str(error):
+            logger.warning(f"Expired callback: {error}")
+            return
+
         logger.error(f"{type(error).__name__}: {error}",
                      extra=context, exc_info=True)
 
@@ -65,26 +69,26 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         user_message = self._get_user_message(error)
         await self._notify_user(event, user_message)
 
-        if self.notify_admin and self._is_critical(error):
-            await self._notify_admin(error, context, data.get('bot'))
+        if self. notify_admin and self._is_critical(error):
+            await self._notify_admin(error, context, data. get('bot'))
 
     def _extract_context(self, event: Union[Update, Message, CallbackQuery]) -> Dict[str, Any]:
         """Extract user/message info from event."""
-        context = {'timestamp': datetime.now().isoformat()}
+        context = {'timestamp': datetime.now(). isoformat()}
 
         user = None
         if isinstance(event, Message):
-            user = event.from_user
+            user = event. from_user
             context['chat_id'] = event.chat.id
         elif isinstance(event, CallbackQuery):
-            user = event.from_user
+            user = event. from_user
             context['callback_data'] = event.data
         elif hasattr(event, 'message') and event.message:
             user = event.message.from_user
-            context['chat_id'] = event.message.chat.id
+            context['chat_id'] = event. message.chat.id
         elif hasattr(event, 'callback_query') and event.callback_query:
-            user = event.callback_query.from_user
-            context['callback_data'] = event.callback_query.data
+            user = event.callback_query. from_user
+            context['callback_data'] = event. callback_query.data
 
         if user:
             context['user_id'] = user.id
@@ -97,7 +101,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         if isinstance(error, (DatabaseError, OperationalError)):
             return ERROR_DATABASE
         if isinstance(error, IntegrityError):
-            return "❌ Ошибка при сохранении данных. Попробуйте еще раз."
+            return "❌ Ошибка при сохранении данных.  Попробуйте еще раз."
         if isinstance(error, TelegramForbiddenError):
             return ""  # User blocked bot
         if isinstance(error, TelegramBadRequest):
@@ -110,7 +114,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
             return "❌ Ошибка Telegram API. Попробуйте позже."
         if isinstance(error, ValueError):
             return f"❌ Ошибка валидации: {str(error)}"
-        return "❌ Произошла ошибка. Попробуйте позже."
+        return "❌ Произошла ошибка.  Попробуйте позже."
 
     def _is_critical(self, error: Exception) -> bool:
         """Check if error requires admin notification."""
@@ -121,29 +125,34 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         try:
             import sentry_sdk
             if context.get('user_id'):
-                sentry_sdk.set_user(
-                    {"id": context['user_id'], "username": context.get('username')})
+                sentry_sdk. set_user(
+                    {"id": context['user_id'], "username": context. get('username')})
             sentry_sdk.set_context("telegram", context)
             sentry_sdk.capture_exception(error)
         except Exception as e:
-            logger.error(f"Sentry error: {e}")
+            logger. error(f"Sentry error: {e}")
 
     async def _notify_user(self, event: Union[Update, Message, CallbackQuery], message: str):
         """Send error message to user."""
         if not message:
             return
 
-        try:
-            if isinstance(event, Message):
-                await event.answer(message)
-            elif isinstance(event, CallbackQuery):
-                await event.answer(message, show_alert=True)
-            elif hasattr(event, 'message') and event.message:
-                await event.message.answer(message)
-            elif hasattr(event, 'callback_query') and event.callback_query:
-                await event.callback_query.answer(message, show_alert=True)
-        except Exception as e:
-            logger.error(f"Failed to notify user: {e}")
+        # Находим message для ответа
+        msg = None
+        if isinstance(event, Message):
+            msg = event
+        elif isinstance(event, CallbackQuery):
+            msg = event.message
+        elif hasattr(event, 'message'):
+            msg = event.message
+        elif hasattr(event, 'callback_query') and event.callback_query:
+            msg = event.callback_query.message
+
+        if msg:
+            try:
+                await msg.answer(message)
+            except Exception as e:
+                logger.warning(f"Failed to notify user: {e}")
 
     async def _notify_admin(self, error: Exception, context: Dict[str, Any], bot):
         """Send critical error notification to admin."""
@@ -152,7 +161,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
 
         try:
             text = (
-                f"🚨 <b>Критическая ошибка!</b>\n\n"
+                f"🚨 <b>Критическая ошибка! </b>\n\n"
                 f"<b>Тип:</b> <code>{type(error).__name__}</code>\n"
                 f"<b>Сообщение:</b> <code>{str(error)[:200]}</code>\n"
                 f"<b>Пользователь:</b> {context.get('user_id', 'Unknown')}\n"
