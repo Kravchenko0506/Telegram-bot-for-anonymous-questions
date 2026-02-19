@@ -6,17 +6,27 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
 import sentry_sdk
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from config import (
-    LOG_LEVEL, LOG_FORMAT, LOG_TO_FILE, LOG_FILE_PATH,
-    LOG_MAX_SIZE_MB, LOG_BACKUP_COUNT, SENTRY_DSN,
-    SENTRY_ENVIRONMENT, SENTRY_RELEASE, SENTRY_SAMPLE_RATE,
-    SENTRY_TRACES_SAMPLE_RATE, ENABLE_PERFORMANCE_MONITORING,
-    DEBUG_MODE, VERBOSE_DATABASE_LOGS
+    DEBUG_MODE,
+    ENABLE_PERFORMANCE_MONITORING,
+    LOG_BACKUP_COUNT,
+    LOG_FILE_PATH,
+    LOG_FORMAT,
+    LOG_LEVEL,
+    LOG_MAX_SIZE_MB,
+    LOG_TO_FILE,
+    SENTRY_DSN,
+    SENTRY_ENVIRONMENT,
+    SENTRY_RELEASE,
+    SENTRY_SAMPLE_RATE,
+    SENTRY_TRACES_SAMPLE_RATE,
+    VERBOSE_DATABASE_LOGS,
 )
 from utils.time_helper import ADMIN_TZ
 
@@ -25,17 +35,17 @@ class ColoredFormatter(logging.Formatter):
     """Formatter with color support for console output."""
 
     COLORS = {
-        'DEBUG': '\033[36m',
-        'INFO': '\033[32m',
-        'WARNING': '\033[33m',
-        'ERROR': '\033[31m',
-        'CRITICAL': '\033[41m',
+        "DEBUG": "\033[36m",
+        "INFO": "\033[32m",
+        "WARNING": "\033[33m",
+        "ERROR": "\033[31m",
+        "CRITICAL": "\033[41m",
     }
-    RESET = '\033[0m'
+    RESET = "\033[0m"
 
     def format(self, record):
         if sys.stdout.isatty():
-            color = self.COLORS.get(record.levelname, '')
+            color = self.COLORS.get(record.levelname, "")
             record.levelname = f"{color}{record.levelname}{self.RESET}"
         return super().format(record)
 
@@ -49,8 +59,9 @@ class TzFormatter(logging.Formatter):
 
     def formatTime(self, record, datefmt=None):
         try:
-            dt = datetime.fromtimestamp(
-                record.created, timezone.utc).astimezone(self.tz)
+            dt = datetime.fromtimestamp(record.created, timezone.utc).astimezone(
+                self.tz
+            )
             return dt.strftime(datefmt) if datefmt else dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             return super().formatTime(record, datefmt)
@@ -63,8 +74,7 @@ def setup_sentry() -> bool:
 
     try:
         sentry_logging = LoggingIntegration(
-            level=logging.INFO,
-            event_level=logging.ERROR
+            level=logging.INFO, event_level=logging.ERROR
         )
 
         sentry_sdk.init(
@@ -72,15 +82,21 @@ def setup_sentry() -> bool:
             environment=SENTRY_ENVIRONMENT,
             release=SENTRY_RELEASE,
             sample_rate=SENTRY_SAMPLE_RATE,
-            traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE if ENABLE_PERFORMANCE_MONITORING else 0.0,
-            integrations=[sentry_logging,
-                          AsyncioIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=(
+                SENTRY_TRACES_SAMPLE_RATE if ENABLE_PERFORMANCE_MONITORING else 0.0
+            ),
+            integrations=[
+                sentry_logging,
+                AsyncioIntegration(),
+                SqlalchemyIntegration(),
+            ],
             attach_stacktrace=True,
             send_default_pii=False,
             enable_tracing=ENABLE_PERFORMANCE_MONITORING,
         )
 
         from config import ADMIN_ID
+
         sentry_sdk.set_user({"id": str(ADMIN_ID), "role": "admin"})
         sentry_sdk.set_tag("component", "telegram_bot")
 
@@ -104,13 +120,12 @@ def setup_logging() -> None:
     console_handler.setFormatter(ColoredFormatter(LOG_FORMAT))
     root_logger.addHandler(console_handler)
 
-    
     if LOG_TO_FILE:
         file_handler = logging.handlers.RotatingFileHandler(
             LOG_FILE_PATH,
             maxBytes=LOG_MAX_SIZE_MB * 1024 * 1024,
             backupCount=LOG_BACKUP_COUNT,
-            encoding='utf-8'
+            encoding="utf-8",
         )
         file_handler.setLevel(getattr(logging, LOG_LEVEL))
         file_handler.setFormatter(TzFormatter(LOG_FORMAT))

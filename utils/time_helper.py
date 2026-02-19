@@ -1,12 +1,11 @@
-"""Time formatting utilities for admin timezone display.
+"""Time formatting utilities for admin timezone display."""
 
-"""
 from __future__ import annotations
 
+import logging
+import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-import os
-import logging
 
 _logger = logging.getLogger(__name__)
 

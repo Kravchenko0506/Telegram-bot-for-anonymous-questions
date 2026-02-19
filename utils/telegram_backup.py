@@ -1,19 +1,21 @@
 """Telegram backup system with ZIP archives and automatic delivery."""
 
+import asyncio
 import os
 import shutil
 import sqlite3
 import tempfile
 import zipfile
-import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+
 from aiogram import Bot
 from aiogram.types import BufferedInputFile
-from config import LOG_FILE_PATH, TOKEN, BACKUP_RECIPIENT_ID
-from utils.time_helper import format_admin_time
+
+from config import BACKUP_RECIPIENT_ID, LOG_FILE_PATH, TOKEN
 from models.database import DB_PATH
 from utils.logging_setup import get_logger
+from utils.time_helper import format_admin_time
 
 logger = get_logger(__name__)
 
@@ -32,11 +34,10 @@ class BackupManager:
         """Create complete backup archive with metadata."""
         try:
             if not os.path.exists(self.db_path):
-                raise FileNotFoundError(
-                    f"Database file {self.db_path} not found!")
+                raise FileNotFoundError(f"Database file {self.db_path} not found!")
 
             with tempfile.TemporaryDirectory() as tmp_dir:
-                timestamp = datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')
+                timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
                 backup_path = os.path.join(tmp_dir, f"backup_{timestamp}.db")
                 zip_filename = f"bot_backup_{timestamp}.zip"
                 zip_path = os.path.join(tmp_dir, zip_filename)
@@ -48,27 +49,26 @@ class BackupManager:
                 backup_conn.close()
                 conn.close()
 
-                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
+                with zipfile.ZipFile(
+                    zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6
+                ) as zipf:
                     zipf.write(backup_path, "database.db")
                     db_size = os.path.getsize(backup_path)
 
                     self._add_log_excerpt(zipf)
-                    zipf.writestr("backup_info.txt",
-                                  self._create_backup_info(db_size))
+                    zipf.writestr("backup_info.txt", self._create_backup_info(db_size))
 
                 zip_size = os.path.getsize(zip_path)
                 if zip_size > 50 * 1024 * 1024:
-                    logger.warning(
-                        f"Backup too large for Telegram: {zip_size} bytes")
+                    logger.warning(f"Backup too large for Telegram: {zip_size} bytes")
                     return None, None, 0
 
                 self._save_local_copy(zip_path, zip_filename)
 
-                with open(zip_path, 'rb') as f:
+                with open(zip_path, "rb") as f:
                     backup_data = f.read()
 
-                logger.info(
-                    f"Backup created: {zip_filename} ({zip_size} bytes)")
+                logger.info(f"Backup created: {zip_filename} ({zip_size} bytes)")
                 return backup_data, zip_filename, zip_size
 
         except Exception as e:
@@ -81,7 +81,7 @@ class BackupManager:
             if not os.path.exists(self.log_file_path):
                 return
 
-            with open(self.log_file_path, 'rb') as f:
+            with open(self.log_file_path, "rb") as f:
                 f.seek(0, 2)
                 file_size = f.tell()
                 if file_size > 100 * 1024:
@@ -96,8 +96,7 @@ class BackupManager:
         """Create backup metadata file."""
         try:
             db_stats = self._get_database_stats()
-            created_at = format_admin_time(
-                datetime.utcnow(), "%d.%m.%Y %H:%M:%S")
+            created_at = format_admin_time(datetime.utcnow(), "%d.%m.%Y %H:%M:%S")
             return f""" Bot Backup Information
 Created: {created_at}
 Database: {os.path.basename(self.db_path)}
@@ -117,11 +116,13 @@ Keep this backup file safe!
             stats = []
             with sqlite3.connect(self.db_path) as conn:
                 tables = conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
                 for (table,) in tables:
                     try:
                         count = conn.execute(
-                            f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                            f"SELECT COUNT(*) FROM {table}"
+                        ).fetchone()[0]
                         stats.append(f"• {table}: {count:,} records")
                     except Exception:
                         stats.append(f"• {table}: unable to count")
@@ -143,17 +144,17 @@ Keep this backup file safe!
             backups = sorted(
                 self.backup_dir.glob("bot_backup_*.zip"),
                 key=lambda f: f.stat().st_mtime,
-                reverse=True
+                reverse=True,
             )
-            for old in backups[self.keep_local_backups:]:
+            for old in backups[self.keep_local_backups :]:
                 old.unlink()
                 logger.debug(f"Removed old backup: {old.name}")
         except Exception as e:
             logger.error(f"Backup cleanup failed: {e}")
 
-    def _format_size(self, size: int) -> str:
+    def _format_size(self, size: float) -> str:
 
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if size < 1024:
                 return f"{size:.1f} {unit}"
             size /= 1024
@@ -185,7 +186,7 @@ Keep this backup file safe!
             await bot.send_document(
                 chat_id=recipient_id,
                 document=BufferedInputFile(backup_data, filename=filename),
-                caption=caption
+                caption=caption,
             )
 
             logger.info(f"Backup sent to user {recipient_id}")
@@ -207,7 +208,9 @@ backup_manager = BackupManager()
 
 async def create_and_send_backup(recipient_id: int, bot_instance=None) -> bool:
     """Create and send backup to specified user."""
-    return await backup_manager.send_backup(user_id=recipient_id, bot_instance=bot_instance)
+    return await backup_manager.send_backup(
+        user_id=recipient_id, bot_instance=bot_instance
+    )
 
 
 async def scheduled_backup_task(recipient_id: int):

@@ -1,31 +1,28 @@
 """
-User question processor: validation, 
-saving to database, admin notification, 
-responses to users. 
+User question processor: validation,
+saving to database, admin notification,
+responses to users.
 """
 
-from aiogram import Router
-from aiogram.types import Message, CallbackQuery
-from datetime import datetime
 import re
-from config import (
-    ADMIN_ID,
-    ERROR_MESSAGE_EMPTY,
-    ERROR_DATABASE,
-    USER_ANSWER_RECEIVED
+from datetime import datetime
+
+from aiogram import Router
+from aiogram.types import CallbackQuery, Message
+
+from config import ADMIN_ID, ERROR_DATABASE, ERROR_MESSAGE_EMPTY, USER_ANSWER_RECEIVED
+from keyboards.inline import (
+    get_admin_question_keyboard,
+    get_user_blocked_keyboard,
+    get_user_question_sent_keyboard,
 )
 from models.database import async_session
 from models.questions import Question
-from models.user_states import UserStateManager
 from models.settings import SettingsManager
-from utils.validators import InputValidator, ContentModerator
-from keyboards.inline import (
-    get_admin_question_keyboard,
-    get_user_question_sent_keyboard,
-    get_user_blocked_keyboard
-)
+from models.user_states import UserStateManager
 from utils.logging_setup import get_logger
 from utils.time_helper import format_admin_time
+from utils.validators import ContentModerator, InputValidator
 
 router = Router()
 logger = get_logger(__name__)
@@ -61,7 +58,7 @@ async def _handle_new_question_request(callback: CallbackQuery):
                 "✍️ <b>Напишите ваш новый вопрос:</b>\n\n"
                 f"<i>Минимальная длина: {min_length} символов</i>\n"
                 f"<i>Максимальная длина: {max_length} символов</i>",
-                reply_markup=None
+                reply_markup=None,
             )
             await callback.answer("Теперь можете написать новый вопрос")
             logger.info(f"User {user_id} started new question")
@@ -70,7 +67,9 @@ async def _handle_new_question_request(callback: CallbackQuery):
             logger.error(f"State change failed for user {user_id}")
     except Exception as e:
         logger.error(f"Callback error for user {user_id}: {e}")
-        await callback.answer("❌ Произошла ошибка. Попробуйте еще раз.", show_alert=True)
+        await callback.answer(
+            "❌ Произошла ошибка. Попробуйте еще раз.", show_alert=True
+        )
 
 
 async def _handle_invalid_callback(callback: CallbackQuery):
@@ -142,18 +141,20 @@ async def _process_user_question(message: Message):
     min_length = await SettingsManager.get_min_question_length()
     max_length = await SettingsManager.get_max_question_length()
     is_valid, error_message = InputValidator.validate_question(
-        message.text, max_length, min_length)
+        message.text, max_length, min_length
+    )
 
     if not is_valid:
         await message.answer(f"❌ {error_message}")
-        logger.warning(
-            f"Invalid question from user {user_id}: {error_message}")
+        logger.warning(f"Invalid question from user {user_id}: {error_message}")
         return
 
     question_text = InputValidator.sanitize_text(message.text, max_length)
 
     if ContentModerator.is_likely_spam(question_text):
-        await message.answer("❌ Ваш вопрос похож на спам. Пожалуйста, задайте настоящий вопрос.")
+        await message.answer(
+            "❌ Ваш вопрос похож на спам. Пожалуйста, задайте настоящий вопрос."
+        )
         logger.warning(f"Spam detected from user {user_id}")
         return
 
@@ -182,15 +183,15 @@ async def _save_question_to_db(question_text: str, user_id: int):
     try:
         async with async_session() as session:
             question = Question.create_new(
-                text=question_text,
-                user_id=user_id,
-                unique_id=None
+                text=question_text, user_id=user_id, unique_id=None
             )
             session.add(question)
             await session.commit()
             await session.refresh(question)
 
-            await UserStateManager.set_user_state(user_id, UserStateManager.STATE_QUESTION_SENT)
+            await UserStateManager.set_user_state(
+                user_id, UserStateManager.STATE_QUESTION_SENT
+            )
 
             logger.info(f"Question saved: ID={question.id}")
             return question.id
@@ -218,13 +219,12 @@ async def _notify_admin_about_question(question_id: int, question_text: str, bot
         await bot.send_message(ADMIN_ID, admin_message, reply_markup=keyboard)
         logger.info(f"Admin notified about question {question_id}")
     except Exception as e:
-        logger.error(
-            f"Admin notification failed for question {question_id}: {e}")
+        logger.error(f"Admin notification failed for question {question_id}: {e}")
 
 
 async def _confirm_question_to_user(message: Message, question_id: int):
     """Confirm to user that the question was submitted and offer next action."""
-    success_message = f"""
+    success_message = """
 ✅ <b>Ваш вопрос отправлен автору анонимно!</b>
 
 📩 Ответ придет в этот же чат, если автор решит ответить.
@@ -284,7 +284,9 @@ async def _process_admin_answer(question_id: int, answer_text: str, message: Mes
                     f"<b>Ваш ответ:</b> {answer_text[:100]}..."
                 )
             else:
-                await message.answer("✅ Ответ сохранен, но не удалось отправить пользователю.")
+                await message.answer(
+                    "✅ Ответ сохранен, но не удалось отправить пользователю."
+                )
 
             logger.info(f"Answer processed for question {question_id}")
 
@@ -296,19 +298,19 @@ async def _process_admin_answer(question_id: int, answer_text: str, message: Mes
 async def _send_answer_to_user(question: Question, answer_text: str, bot) -> bool:
     """Deliver answer to the user; return True on success, False otherwise."""
     try:
-        user_message = USER_ANSWER_RECEIVED.format(
-            question=question.text,
-            answer=answer_text
-        ) + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
+        user_message = (
+            USER_ANSWER_RECEIVED.format(question=question.text, answer=answer_text)
+            + "\n\n💬 <b>Хотите задать новый вопрос?</b>"
+        )
 
         keyboard = get_user_question_sent_keyboard()
         await bot.send_message(
-            chat_id=question.user_id,
-            text=user_message,
-            reply_markup=keyboard
+            chat_id=question.user_id, text=user_message, reply_markup=keyboard
         )
 
-        await UserStateManager.set_user_state(question.user_id, UserStateManager.STATE_QUESTION_SENT)
+        await UserStateManager.set_user_state(
+            question.user_id, UserStateManager.STATE_QUESTION_SENT
+        )
         return True
 
     except Exception as e:

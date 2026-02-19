@@ -2,10 +2,11 @@
 Admin state management with database persistence and expiration.
 """
 
-from sqlalchemy import Column, BigInteger, String, DateTime, JSON
-from sqlalchemy.sql import func
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+from sqlalchemy import JSON, BigInteger, Column, DateTime, String
+from sqlalchemy.sql import func
 
 from models.database import Base, async_session
 from utils.logging_setup import get_logger
@@ -23,8 +24,9 @@ class AdminState(Base):
     state_data = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(),
-                        onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     def __repr__(self) -> str:
         return f"<AdminState(admin_id={self.admin_id}, type='{self.state_type}')>"
@@ -53,11 +55,13 @@ class AdminStateManager:
         admin_id: int,
         state_type: str,
         state_data: Dict[str, Any],
-        expiration_minutes: int = DEFAULT_EXPIRATION_MINUTES
+        expiration_minutes: int = DEFAULT_EXPIRATION_MINUTES,
     ) -> bool:
         """Set or update admin state with expiration."""
         try:
-            expires_at = AdminStateManager._utc_now() + timedelta(minutes=expiration_minutes)
+            expires_at = AdminStateManager._utc_now() + timedelta(
+                minutes=expiration_minutes
+            )
 
             async with async_session() as session:
                 existing = await session.get(AdminState, admin_id)
@@ -67,12 +71,14 @@ class AdminStateManager:
                     existing.state_data = state_data
                     existing.expires_at = expires_at
                 else:
-                    session.add(AdminState(
-                        admin_id=admin_id,
-                        state_type=state_type,
-                        state_data=state_data,
-                        expires_at=expires_at
-                    ))
+                    session.add(
+                        AdminState(
+                            admin_id=admin_id,
+                            state_type=state_type,
+                            state_data=state_data,
+                            expires_at=expires_at,
+                        )
+                    )
 
                 await session.commit()
                 logger.info(f"State set for admin {admin_id}: {state_type}")
@@ -95,17 +101,17 @@ class AdminStateManager:
                 now = AdminStateManager._utc_now()
                 expires_at = AdminStateManager._to_naive(state.expires_at)
 
-                if now > expires_at:
+                if expires_at is None or now > expires_at:
                     await session.delete(state)
                     await session.commit()
                     logger.info(f"Expired state removed for admin {admin_id}")
                     return None
 
                 return {
-                    'type': state.state_type,
-                    'data': state.state_data,
-                    'created_at': AdminStateManager._to_naive(state.created_at),
-                    'expires_at': expires_at
+                    "type": state.state_type,
+                    "data": state.state_data,
+                    "created_at": AdminStateManager._to_naive(state.created_at),
+                    "expires_at": expires_at,
                 }
 
         except Exception as e:
@@ -132,7 +138,7 @@ class AdminStateManager:
     async def is_in_state(admin_id: int, state_type: str) -> bool:
         """Check if admin is in a specific state."""
         state = await AdminStateManager.get_state(admin_id)
-        return state is not None and state['type'] == state_type
+        return state is not None and state["type"] == state_type
 
     @staticmethod
     async def cleanup_expired_states() -> int:

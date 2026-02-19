@@ -1,17 +1,17 @@
 """Error handling middleware for the bot."""
 
-from typing import Callable, Dict, Any, Awaitable, Union
 from datetime import datetime
+from typing import Any, Awaitable, Callable, Dict, Union
 
 from aiogram import BaseMiddleware
-from aiogram.types import Update, Message, CallbackQuery
 from aiogram.exceptions import (
+    TelegramAPIError,
     TelegramBadRequest,
     TelegramForbiddenError,
     TelegramNotFound,
     TelegramUnauthorizedError,
-    TelegramAPIError
 )
+from aiogram.types import CallbackQuery, Message, Update
 from sqlalchemy.exc import DatabaseError, IntegrityError, OperationalError
 
 from config import ADMIN_ID, ERROR_DATABASE, SENTRY_DSN
@@ -21,11 +21,14 @@ logger = get_logger(__name__)
 
 # Sentry integration
 SENTRY_ENABLED = False
-if SENTRY_DSN:
-    try:
-        import sentry_sdk
+try:
+    import sentry_sdk
+
+    if SENTRY_DSN:
         SENTRY_ENABLED = True
-    except ImportError:
+except ImportError:
+    sentry_sdk = None
+    if SENTRY_DSN:
         logger.warning("Sentry SDK not installed")
 
 
@@ -37,9 +40,11 @@ class ErrorHandlerMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[Union[Update, Message, CallbackQuery], Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[
+            [Union[Update, Message, CallbackQuery], Dict[str, Any]], Awaitable[Any]
+        ],
         event: Union[Update, Message, CallbackQuery],
-        data: Dict[str, Any]
+        data: Dict[str, Any],
     ) -> Any:
         """Execute handler with error catching."""
         try:
@@ -51,7 +56,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         self,
         event: Union[Update, Message, CallbackQuery],
         error: Exception,
-        data: Dict[str, Any]
+        data: Dict[str, Any],
     ):
         """Process error: log, notify user, alert admin if critical."""
         context = self._extract_context(event)
@@ -60,8 +65,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
             logger.warning(f"Expired callback: {error}")
             return
 
-        logger.error(f"{type(error).__name__}: {error}",
-                     extra=context, exc_info=True)
+        logger.error(f"{type(error).__name__}: {error}", extra=context, exc_info=True)
 
         if SENTRY_ENABLED:
             self._send_to_sentry(error, context)
@@ -69,30 +73,32 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         user_message = self._get_user_message(error)
         await self._notify_user(event, user_message)
 
-        if self. notify_admin and self._is_critical(error):
-            await self._notify_admin(error, context, data. get('bot'))
+        if self.notify_admin and self._is_critical(error):
+            await self._notify_admin(error, context, data.get("bot"))
 
-    def _extract_context(self, event: Union[Update, Message, CallbackQuery]) -> Dict[str, Any]:
+    def _extract_context(
+        self, event: Union[Update, Message, CallbackQuery]
+    ) -> Dict[str, Any]:
         """Extract user/message info from event."""
-        context = {'timestamp': datetime.now(). isoformat()}
+        context = {"timestamp": datetime.now().isoformat()}
 
         user = None
         if isinstance(event, Message):
-            user = event. from_user
-            context['chat_id'] = event.chat.id
+            user = event.from_user
+            context["chat_id"] = event.chat.id
         elif isinstance(event, CallbackQuery):
-            user = event. from_user
-            context['callback_data'] = event.data
-        elif hasattr(event, 'message') and event.message:
+            user = event.from_user
+            context["callback_data"] = event.data
+        elif hasattr(event, "message") and event.message:
             user = event.message.from_user
-            context['chat_id'] = event. message.chat.id
-        elif hasattr(event, 'callback_query') and event.callback_query:
-            user = event.callback_query. from_user
-            context['callback_data'] = event. callback_query.data
+            context["chat_id"] = event.message.chat.id
+        elif hasattr(event, "callback_query") and event.callback_query:
+            user = event.callback_query.from_user
+            context["callback_data"] = event.callback_query.data
 
         if user:
-            context['user_id'] = user.id
-            context['username'] = user.username
+            context["user_id"] = user.id
+            context["username"] = user.username
 
         return context
 
@@ -118,21 +124,27 @@ class ErrorHandlerMiddleware(BaseMiddleware):
 
     def _is_critical(self, error: Exception) -> bool:
         """Check if error requires admin notification."""
-        return isinstance(error, (DatabaseError, OperationalError, TelegramUnauthorizedError))
+        return isinstance(
+            error, (DatabaseError, OperationalError, TelegramUnauthorizedError)
+        )
 
     def _send_to_sentry(self, error: Exception, context: Dict[str, Any]):
         """Send error to Sentry."""
         try:
-            import sentry_sdk
-            if context.get('user_id'):
-                sentry_sdk. set_user(
-                    {"id": context['user_id'], "username": context. get('username')})
+            if sentry_sdk is None:
+                return
+            if context.get("user_id"):
+                sentry_sdk.set_user(
+                    {"id": context["user_id"], "username": context.get("username")}
+                )
             sentry_sdk.set_context("telegram", context)
             sentry_sdk.capture_exception(error)
         except Exception as e:
-            logger. error(f"Sentry error: {e}")
+            logger.error(f"Sentry error: {e}")
 
-    async def _notify_user(self, event: Union[Update, Message, CallbackQuery], message: str):
+    async def _notify_user(
+        self, event: Union[Update, Message, CallbackQuery], message: str
+    ):
         """Send error message to user."""
         if not message:
             return
@@ -143,9 +155,9 @@ class ErrorHandlerMiddleware(BaseMiddleware):
             msg = event
         elif isinstance(event, CallbackQuery):
             msg = event.message
-        elif hasattr(event, 'message'):
+        elif hasattr(event, "message"):
             msg = event.message
-        elif hasattr(event, 'callback_query') and event.callback_query:
+        elif hasattr(event, "callback_query") and event.callback_query:
             msg = event.callback_query.message
 
         if msg:

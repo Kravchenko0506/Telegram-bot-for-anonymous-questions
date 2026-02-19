@@ -1,9 +1,8 @@
 """This module provides commands for viewing and updating"""
 
-
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
 
 from config import ADMIN_ID, ERROR_ADMIN_ONLY
 from models.settings import SettingsManager
@@ -21,7 +20,7 @@ LIMIT_COMMANDS = {
         "range": (1, 100),
         "unit": "",
         "name": "Лимит вопросов",
-        "description": "вопросов в час"
+        "description": "вопросов в час",
     },
     "cooldown": {
         "command": "set_cooldown",
@@ -30,7 +29,7 @@ LIMIT_COMMANDS = {
         "range": (0, 3600),
         "unit": "сек",
         "name": "Задержка",
-        "description": "секунд"
+        "description": "секунд",
     },
     "min_question": {
         "command": "set_min_question",
@@ -39,7 +38,7 @@ LIMIT_COMMANDS = {
         "range": (1, 100),
         "unit": "символов",
         "name": "Минимальная длина вопроса",
-        "description": "символов"
+        "description": "символов",
     },
     "max_question": {
         "command": "set_max_question",
@@ -48,7 +47,7 @@ LIMIT_COMMANDS = {
         "range": (10, 10000),
         "unit": "символов",
         "name": "Максимальная длина вопроса",
-        "description": "символов"
+        "description": "символов",
     },
     "max_answer": {
         "command": "set_max_answer",
@@ -57,7 +56,7 @@ LIMIT_COMMANDS = {
         "range": (10, 10000),
         "unit": "символов",
         "name": "Максимальная длина ответа",
-        "description": "символов"
+        "description": "символов",
     },
     "per_page": {
         "command": "set_per_page",
@@ -66,8 +65,8 @@ LIMIT_COMMANDS = {
         "range": (1, 50),
         "unit": "",
         "name": "Вопросов на странице",
-        "description": "вопросов на странице"
-    }
+        "description": "вопросов на странице",
+    },
 }
 
 
@@ -89,7 +88,7 @@ async def limits_command(message: Message):
 
         commands_list = "\n".join(
             f"- /{config['command']} Значение - {config['description']} "
-            f"({config['range'][0]}-{config['range'][1]})"
+            f"({config['range'][0]}-{config['range'][1]})"  # type: ignore[index]
             for config in LIMIT_COMMANDS.values()
         )
 
@@ -117,7 +116,7 @@ async def limits_command(message: Message):
         logger.error(f"Error getting limits: {e}")
 
 
-async def handle_set_command(message: Message, config: dict):
+async def handle_set_command(message: Message, config: dict) -> None:
     """General handler for limit setting commands."""
     args = message.text.split(maxsplit=1)
     min_val, max_val = config["range"]
@@ -142,7 +141,9 @@ async def handle_set_command(message: Message, config: dict):
             )
             logger.info(f"Admin updated {config['command']} to: {new_value}")
         else:
-            await message.answer(f"❌ Неверное значение. Допустимо: {min_val}-{max_val}")
+            await message.answer(
+                f"❌ Неверное значение. Допустимо: {min_val}-{max_val}"
+            )
     except ValueError:
         await message.answer("❌ Укажите число")
 
@@ -156,5 +157,3 @@ for key, config in LIMIT_COMMANDS.items():
             await message.answer(ERROR_ADMIN_ONLY)
             return
         await handle_set_command(message, config)
-
-

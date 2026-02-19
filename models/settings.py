@@ -4,20 +4,21 @@ Dynamic configuration system.
 
 """
 
-from sqlalchemy import Column, String
 from typing import Optional
 
-from models.database import Base, async_session
+from sqlalchemy import Column, String
+
 from config import (
-    DEFAULT_AUTHOR_NAME,
     DEFAULT_AUTHOR_INFO,
-    RATE_LIMIT_QUESTIONS_PER_HOUR,
-    RATE_LIMIT_COOLDOWN_SECONDS,
-    MIN_QUESTION_LENGTH,
-    MAX_QUESTION_LENGTH,
+    DEFAULT_AUTHOR_NAME,
     MAX_ANSWER_LENGTH,
-    QUESTIONS_PER_PAGE
+    MAX_QUESTION_LENGTH,
+    MIN_QUESTION_LENGTH,
+    QUESTIONS_PER_PAGE,
+    RATE_LIMIT_COOLDOWN_SECONDS,
+    RATE_LIMIT_QUESTIONS_PER_HOUR,
 )
+from models.database import Base, async_session
 from utils.logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -39,14 +40,14 @@ class SettingsManager:
     """Settings management with database persistence and defaults."""
 
     DEFAULT_SETTINGS = {
-        'author_name': DEFAULT_AUTHOR_NAME,
-        'author_info': DEFAULT_AUTHOR_INFO,
-        'rate_limit_per_hour': str(RATE_LIMIT_QUESTIONS_PER_HOUR),
-        'rate_limit_cooldown': str(RATE_LIMIT_COOLDOWN_SECONDS),
-        'min_question_length': str(MIN_QUESTION_LENGTH),
-        'max_question_length': str(MAX_QUESTION_LENGTH),
-        'max_answer_length': str(MAX_ANSWER_LENGTH),
-        'questions_per_page': str(QUESTIONS_PER_PAGE)
+        "author_name": DEFAULT_AUTHOR_NAME,
+        "author_info": DEFAULT_AUTHOR_INFO,
+        "rate_limit_per_hour": str(RATE_LIMIT_QUESTIONS_PER_HOUR),
+        "rate_limit_cooldown": str(RATE_LIMIT_COOLDOWN_SECONDS),
+        "min_question_length": str(MIN_QUESTION_LENGTH),
+        "max_question_length": str(MAX_QUESTION_LENGTH),
+        "max_answer_length": str(MAX_ANSWER_LENGTH),
+        "questions_per_page": str(QUESTIONS_PER_PAGE),
     }
 
     @staticmethod
@@ -92,71 +93,79 @@ class SettingsManager:
 
     @staticmethod
     async def get_author_name() -> str:
-        return await SettingsManager.get_setting('author_name') or DEFAULT_AUTHOR_NAME
+        return await SettingsManager.get_setting("author_name") or DEFAULT_AUTHOR_NAME
 
     @staticmethod
     async def set_author_name(name: str) -> bool:
         if not name or not name.strip():
             return False
-        return await SettingsManager.set_setting('author_name', name.strip())
+        return await SettingsManager.set_setting("author_name", name.strip())
 
     @staticmethod
     async def get_author_info() -> str:
-        return await SettingsManager.get_setting('author_info') or DEFAULT_AUTHOR_INFO
+        return await SettingsManager.get_setting("author_info") or DEFAULT_AUTHOR_INFO
 
     @staticmethod
     async def set_author_info(info: str) -> bool:
         if not info or not info.strip():
             return False
-        return await SettingsManager.set_setting('author_info', info.strip())
+        return await SettingsManager.set_setting("author_info", info.strip())
 
     @staticmethod
     async def get_rate_limit_per_hour() -> int:
-        return await SettingsManager._get_int('rate_limit_per_hour', RATE_LIMIT_QUESTIONS_PER_HOUR)
+        return await SettingsManager._get_int(
+            "rate_limit_per_hour", RATE_LIMIT_QUESTIONS_PER_HOUR
+        )
 
     @staticmethod
     async def set_rate_limit_per_hour(limit: int) -> bool:
-        return await SettingsManager._set_int('rate_limit_per_hour', limit, 1, 100)
+        return await SettingsManager._set_int("rate_limit_per_hour", limit, 1, 100)
 
     @staticmethod
     async def get_rate_limit_cooldown() -> int:
-        return await SettingsManager._get_int('rate_limit_cooldown', RATE_LIMIT_COOLDOWN_SECONDS)
+        return await SettingsManager._get_int(
+            "rate_limit_cooldown", RATE_LIMIT_COOLDOWN_SECONDS
+        )
 
     @staticmethod
     async def set_rate_limit_cooldown(seconds: int) -> bool:
-        return await SettingsManager._set_int('rate_limit_cooldown', seconds, 0, 3600)
+        return await SettingsManager._set_int("rate_limit_cooldown", seconds, 0, 3600)
 
     @staticmethod
     async def get_min_question_length() -> int:
-        return await SettingsManager._get_int('min_question_length', MIN_QUESTION_LENGTH)
+        return await SettingsManager._get_int(
+            "min_question_length", MIN_QUESTION_LENGTH
+        )
 
     @staticmethod
     async def set_min_question_length(length: int) -> bool:
-        return await SettingsManager._set_int('min_question_length', length, 1, 100)
+        return await SettingsManager._set_int("min_question_length", length, 1, 100)
 
     @staticmethod
     async def get_max_question_length() -> int:
-        return await SettingsManager._get_int('max_question_length', MAX_QUESTION_LENGTH)
+        return await SettingsManager._get_int(
+            "max_question_length", MAX_QUESTION_LENGTH
+        )
 
     @staticmethod
     async def set_max_question_length(length: int) -> bool:
-        return await SettingsManager._set_int('max_question_length', length, 10, 10000)
+        return await SettingsManager._set_int("max_question_length", length, 10, 10000)
 
     @staticmethod
     async def get_max_answer_length() -> int:
-        return await SettingsManager._get_int('max_answer_length', MAX_ANSWER_LENGTH)
+        return await SettingsManager._get_int("max_answer_length", MAX_ANSWER_LENGTH)
 
     @staticmethod
     async def set_max_answer_length(length: int) -> bool:
-        return await SettingsManager._set_int('max_answer_length', length, 10, 10000)
+        return await SettingsManager._set_int("max_answer_length", length, 10, 10000)
 
     @staticmethod
     async def get_questions_per_page() -> int:
-        return await SettingsManager._get_int('questions_per_page', QUESTIONS_PER_PAGE)
+        return await SettingsManager._get_int("questions_per_page", QUESTIONS_PER_PAGE)
 
     @staticmethod
     async def set_questions_per_page(count: int) -> bool:
-        return await SettingsManager._set_int('questions_per_page', count, 1, 50)
+        return await SettingsManager._set_int("questions_per_page", count, 1, 50)
 
     @staticmethod
     async def reset_all_to_defaults() -> bool:
@@ -174,8 +183,10 @@ class SettingsManager:
     async def get_all_settings() -> dict:
         """Get all current settings."""
         try:
-            return {key: await SettingsManager.get_setting(key)
-                    for key in SettingsManager.DEFAULT_SETTINGS}
+            return {
+                key: await SettingsManager.get_setting(key)
+                for key in SettingsManager.DEFAULT_SETTINGS
+            }
         except Exception as e:
             logger.error(f"Error getting all settings: {e}")
             return {}

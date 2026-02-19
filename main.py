@@ -3,16 +3,18 @@
 import asyncio
 import signal
 from contextlib import suppress
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
-from config import TOKEN, ADMIN_ID, validate_config, SENTRY_DSN
-from models.database import init_db, close_db, check_db_connection
-from handlers import start, questions, admin, admin_states, admin_limits
-from middlewares.rate_limit import RateLimitMiddleware, CallbackRateLimitMiddleware
+from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
+
+from config import ADMIN_ID, SENTRY_DSN, TOKEN, validate_config
+from handlers import admin, admin_limits, admin_states, questions, start
 from middlewares.error_handler import ErrorHandlerMiddleware
-from utils.logging_setup import setup_logging, get_logger, capture_error
+from middlewares.rate_limit import CallbackRateLimitMiddleware, RateLimitMiddleware
+from models.database import check_db_connection, close_db, init_db
+from utils.logging_setup import capture_error, get_logger, setup_logging
 from utils.periodic_tasks import start_periodic_tasks, stop_periodic_tasks
 
 setup_logging()
@@ -34,8 +36,7 @@ def _install_signals() -> None:
 async def setup_bot() -> tuple[Bot, Dispatcher]:
     """Create Bot & Dispatcher instances and attach middlewares."""
     validate_config()
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(
-        parse_mode=ParseMode.HTML))
+    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     # Errors first
     err_mw = ErrorHandlerMiddleware(notify_admin=True)
@@ -52,7 +53,6 @@ USER_COMMANDS: list[tuple[str, str]] = [
 ]
 
 ADMIN_COMMANDS: list[tuple[str, str]] = [
-    
     ("start", "🚀 Главная"),
     ("settings", "⚙️ Настройки"),
     ("limits", "📏 Управление лимитами"),
@@ -70,11 +70,11 @@ async def setup_bot_menu(bot: Bot) -> None:
     try:
         await bot.set_my_commands(
             [BotCommand(command=c, description=d) for c, d in USER_COMMANDS],
-            BotCommandScopeDefault()
+            BotCommandScopeDefault(),
         )
         await bot.set_my_commands(
             [BotCommand(command=c, description=d) for c, d in ADMIN_COMMANDS],
-            BotCommandScopeChat(chat_id=ADMIN_ID)
+            BotCommandScopeChat(chat_id=ADMIN_ID),
         )
     except Exception as e:  # pragma: no cover
         logger.warning(f"Не удалось установить команды: {e}")
@@ -115,7 +115,8 @@ async def on_shutdown(bot: Bot) -> None:
 
 async def start_polling(bot: Bot, dp: Dispatcher) -> None:
     """Start polling with short retry backoff for transient network errors."""
-    from config import POLLING_TIMEOUT, ALLOWED_UPDATES
+    from config import ALLOWED_UPDATES, POLLING_TIMEOUT
+
     attempts = 0
     while not _shutdown_flag.is_set():
         try:
@@ -149,7 +150,11 @@ async def main_flow() -> None:
 
 
 async def safe_main() -> None:
-    """Top-level guarded runner: install signals, run flow, capture fatal errors, release resources."""
+    """Top-level guarded runner.
+
+    Install signals, run flow, capture fatal errors,
+    release resources.
+    """
     _install_signals()
     try:
         await main_flow()

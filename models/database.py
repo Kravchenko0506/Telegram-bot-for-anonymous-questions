@@ -1,15 +1,15 @@
 """
-Async SQLite database 
+Async SQLite database
 """
 
-import os
 import logging
-from typing import AsyncGenerator
 from pathlib import Path
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import event
+from typing import AsyncGenerator
+
 from dotenv import load_dotenv
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 # Load environment variables
 load_dotenv()
@@ -49,18 +49,16 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 # Create async session factory
-async_session = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
+async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
 
 # Create declarative base for ORM models
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    """Creates and yields an async database session. """
+    """Creates and yields an async database session."""
     async with async_session() as session:
         try:
             yield session
@@ -75,14 +73,14 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Initializes the database by creating all tables and setting up default values."""
     try:
-        # Проверяем что база будет создана в правильном месте
+
         print(f"🔧 Initializing database at: {DB_PATH}")
 
         async with engine.begin() as conn:
-            from models.questions import Question
-            from models.settings import BotSettings
-            from models.user_states import UserState
-            from models.admin_state import AdminState
+            from models.admin_state import AdminState  # noqa: F401
+            from models.questions import Question  # noqa: F401
+            from models.settings import BotSettings  # noqa: F401
+            from models.user_states import UserState  # noqa: F401
 
             await conn.run_sync(Base.metadata.create_all)
 
@@ -90,8 +88,7 @@ async def init_db() -> None:
 
         if DB_PATH.exists():
             file_size = DB_PATH.stat().st_size
-            print(
-                f"✅ Database ready: {DB_PATH} ({file_size} bytes)")
+            print(f"✅ Database ready: {DB_PATH} ({file_size} bytes)")
             logger.info(f"Database initialized at {DB_PATH}")
         else:
             print(f"❌ Database file not found at {DB_PATH}")
@@ -117,6 +114,7 @@ async def check_db_connection() -> bool:
     try:
         async with async_session() as session:
             from sqlalchemy import text
+
             await session.execute(text("SELECT 1"))
             return True
     except Exception as e:
@@ -134,12 +132,13 @@ async def _initialize_default_settings() -> None:
         from models.settings import BotSettings, SettingsManager
 
         async with async_session() as session:
-            for key in ['author_name', 'author_info']:
+            for key in ["author_name", "author_info"]:
                 if not await session.get(BotSettings, key):
-                    session.add(BotSettings(
-                        key=key,
-                        value=SettingsManager.DEFAULT_SETTINGS[key]
-                    ))
+                    session.add(
+                        BotSettings(
+                            key=key, value=SettingsManager.DEFAULT_SETTINGS[key]
+                        )
+                    )
             await session.commit()
             logger.info("Default settings initialized")
 
@@ -156,14 +155,17 @@ async def check_persistence() -> dict:
         "db_path": str(DB_PATH),
         "exists": DB_PATH.exists(),
         "size": DB_PATH.stat().st_size if DB_PATH.exists() else 0,
-        "tables": []
+        "tables": [],
     }
 
     if DB_PATH.exists():
         try:
             async with async_session() as session:
                 from sqlalchemy import text
-                result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+
+                result = await session.execute(
+                    text("SELECT name FROM sqlite_master WHERE type='table'")
+                )
                 tables = [row[0] for row in result.fetchall()]
                 info["tables"] = tables
         except Exception as e:

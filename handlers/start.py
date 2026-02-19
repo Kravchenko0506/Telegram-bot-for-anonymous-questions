@@ -2,15 +2,23 @@
 Start Command Handler
 """
 
+from typing import Optional
+
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import CommandStart
 from aiogram.filters.command import CommandObject
+from aiogram.types import Message
 
-from config import ADMIN_ID, WELCOME_MESSAGE_TEMPLATE, MIN_QUESTION_LENGTH, MAX_QUESTION_LENGTH, BOT_USERNAME
-from utils.logging_setup import get_logger
+from config import (
+    ADMIN_ID,
+    BOT_USERNAME,
+    MAX_QUESTION_LENGTH,
+    MIN_QUESTION_LENGTH,
+    WELCOME_MESSAGE_TEMPLATE,
+)
 from models.settings import SettingsManager
 from models.user_states import UserStateManager
+from utils.logging_setup import get_logger
 
 router = Router()
 logger = get_logger(__name__)
@@ -30,7 +38,7 @@ async def start_handler(message: Message, command: CommandObject):
         await _handle_user_start(message, user_id, unique_id)
 
 
-async def _log_start_event(user_id: int, unique_id: str):
+async def _log_start_event(user_id: int, unique_id: Optional[str]):
     """Log start event with tracking information"""
     log_message = f"/start from user {user_id}"
     if unique_id:
@@ -73,7 +81,7 @@ def get_bot_link(param: str = "") -> str:
     return link
 
 
-async def _handle_user_start(message: Message, user_id: int, unique_id: str):
+async def _handle_user_start(message: Message, user_id: int, unique_id: Optional[str]):
     """Handle /start command for regular users"""
     # Reset user state to idle
     await UserStateManager.reset_to_idle(user_id)
@@ -84,7 +92,7 @@ async def _handle_user_start(message: Message, user_id: int, unique_id: str):
             author_name=author_name,
             author_info=author_info,
             min_length=min_length,
-            max_length=max_length
+            max_length=max_length,
         )
         logger.info(f"User {user_id} received welcome with dynamic settings")
     except Exception as e:
@@ -95,8 +103,7 @@ async def _handle_user_start(message: Message, user_id: int, unique_id: str):
     await message.answer(welcome_text)
 
     if unique_id:
-        logger.info(
-            f"User {user_id} started bot with tracking ID: {unique_id}")
+        logger.info(f"User {user_id} started bot with tracking ID: {unique_id}")
     else:
         logger.info(f"User {user_id} started bot without tracking")
 
@@ -107,7 +114,7 @@ async def _get_user_settings() -> tuple:
         await SettingsManager.get_author_name(),
         await SettingsManager.get_author_info(),
         await SettingsManager.get_min_question_length(),
-        await SettingsManager.get_max_question_length()
+        await SettingsManager.get_max_question_length(),
     )
 
 
@@ -117,5 +124,5 @@ def _get_fallback_welcome() -> str:
         author_name="Автор канала",
         author_info="Здесь можно задать анонимный вопрос",
         min_length=MIN_QUESTION_LENGTH,
-        max_length=MAX_QUESTION_LENGTH
+        max_length=MAX_QUESTION_LENGTH,
     )

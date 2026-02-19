@@ -1,44 +1,45 @@
-"""Implements an admin panel: question management, 
+"""Implements an admin panel: question management,
 bot settings, statistics, and backup."""
 
 from __future__ import annotations
 
-from aiogram import Router, Bot
-from aiogram.types import CallbackQuery, Message
-from aiogram.filters import Command
-from datetime import datetime
-from sqlalchemy import select, func
 import math
+from datetime import datetime
+from typing import Dict
+
+from aiogram import Bot, Router
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
+from sqlalchemy import func, select
 
 from config import (
     ADMIN_ID,
-    ERROR_ADMIN_ONLY,
-    SUCCESS_ADDED_TO_FAVORITES,
-    SUCCESS_REMOVED_FROM_FAVORITES,
-    SUCCESS_QUESTION_DELETED,
-    ERROR_QUESTION_NOT_FOUND,
-    SUCCESS_SETTING_UPDATED,
-    ERROR_SETTING_UPDATE,
-    ERROR_INVALID_VALUE,
-    QUESTIONS_PER_PAGE,
     BACKUP_RECIPIENT_ID,
+    ERROR_ADMIN_ONLY,
+    ERROR_INVALID_VALUE,
+    ERROR_QUESTION_NOT_FOUND,
+    ERROR_SETTING_UPDATE,
+    QUESTIONS_PER_PAGE,
+    SUCCESS_ADDED_TO_FAVORITES,
+    SUCCESS_QUESTION_DELETED,
+    SUCCESS_REMOVED_FROM_FAVORITES,
+    SUCCESS_SETTING_UPDATED,
+)
+from handlers.admin_states import cancel_answer_mode, start_answer_mode
+from keyboards.inline import (
+    get_admin_question_keyboard,
+    get_answered_question_keyboard,
+    get_clear_confirmation_keyboard,
+    get_favorite_question_keyboard,
+    get_pagination_keyboard,
+    get_stats_keyboard,
 )
 from models.database import async_session
 from models.questions import Question
-from keyboards.inline import (
-    get_admin_question_keyboard,
-    get_favorite_question_keyboard,
-    get_answered_question_keyboard,
-    get_stats_keyboard,
-    get_clear_confirmation_keyboard,
-    get_pagination_keyboard,
-)
-from utils.logging_setup import get_logger
-from handlers.admin_states import start_answer_mode, cancel_answer_mode
 from models.settings import SettingsManager
-from utils.runtime import uptime, format_timedelta
+from utils.logging_setup import get_logger
+from utils.runtime import format_timedelta, uptime
 from utils.time_helper import format_admin_time
-from typing import Dict
 
 router = Router()
 logger = get_logger(__name__)
@@ -51,7 +52,9 @@ async def noop_callback(callback: CallbackQuery) -> None:
 
 
 # Inline callback handling
-async def handle_question_action(callback: CallbackQuery, action: str, qid: int) -> bool:
+async def handle_question_action(
+    callback: CallbackQuery, action: str, qid: int
+) -> bool:
     """Execute a single question action; return True if handled."""
     async with async_session() as session:
         question = await session.get(Question, qid)
@@ -65,12 +68,15 @@ async def handle_question_action(callback: CallbackQuery, action: str, qid: int)
             question.is_favorite = not question.is_favorite
             await session.commit()
             await callback.answer(
-                SUCCESS_ADDED_TO_FAVORITES if question.is_favorite else SUCCESS_REMOVED_FROM_FAVORITES
+                SUCCESS_ADDED_TO_FAVORITES
+                if question.is_favorite
+                else SUCCESS_REMOVED_FROM_FAVORITES
             )
             try:
                 await callback.message.edit_reply_markup(
                     reply_markup=get_admin_question_keyboard(
-                        qid, is_favorite=question.is_favorite)
+                        qid, is_favorite=question.is_favorite
+                    )
                 )
             except Exception:
                 pass
@@ -81,7 +87,8 @@ async def handle_question_action(callback: CallbackQuery, action: str, qid: int)
             await callback.answer("⭐ Убрано из избранного")
             try:
                 await callback.message.edit_text(
-                    f"⭐ <s>{(callback.message.text or '').strip()}</s>\n\n<i>Убрано из избранного</i>",
+                    f"⭐ <s>{(callback.message.text or '').strip()}</s>"
+                    f"\n\n<i>Убрано из избранного</i>",
                     reply_markup=None,
                 )
             except Exception:
@@ -109,7 +116,7 @@ async def admin_question_callback(callback: CallbackQuery) -> None:
     try:
         data = callback.data or ""
 
-    # Pagination
+        # Pagination
         if data.startswith(("pending_page:", "favorites_page:", "answered_page:")):
             prefix, raw_page = data.split(":", 1)
             try:
@@ -118,7 +125,9 @@ async def admin_question_callback(callback: CallbackQuery) -> None:
                 await callback.answer("❌ Страница", show_alert=True)
                 return
             list_type = prefix.replace("_page", "")
-            await show_questions_page(callback.message, list_type, page, edit_message=True)
+            await show_questions_page(
+                callback.message, list_type, page, edit_message=True
+            )
             await callback.answer()
             return
         if data == "clear_all_questions":
@@ -165,27 +174,24 @@ async def show_questions_page(
         async with async_session() as session:
             filters = [Question.is_deleted.is_(False)]
             if list_type == "pending":
-                filters += [Question.answer.is_(None),
-                            Question.is_favorite.is_(False)]
+                filters += [Question.answer.is_(None), Question.is_favorite.is_(False)]
                 title = "⏳ <b>Неотвеченные</b>"
-                kb_type = "pending"
                 order_by = [Question.created_at.desc()]
             elif list_type == "favorites":
                 filters += [Question.is_favorite.is_(True)]
                 title = "⭐ <b>Избранные</b>"
-                kb_type = "favorites"
                 order_by = [Question.created_at.desc()]
             elif list_type == "answered":
                 filters += [Question.answer.is_not(None)]
                 title = "✅ <b>Отвеченные</b>"
-                kb_type = "answered"
-                order_by = [Question.answered_at.desc(),
-                            Question.created_at.desc()]
+                order_by = [Question.answered_at.desc(), Question.created_at.desc()]
             else:
                 await message.answer("❌ Неизвестный тип списка")
                 return
 
-            total_q = (await session.execute(select(func.count(Question.id)).where(*filters))).scalar() or 0
+            total_q = (
+                await session.execute(select(func.count(Question.id)).where(*filters))
+            ).scalar() or 0
             if total_q == 0:
                 empty_map = {
                     "pending": "⏳ Нет неотвеченных вопросов.",
@@ -203,13 +209,15 @@ async def show_questions_page(
             page = max(0, min(page, total_pages - 1))
             offset = page * QUESTIONS_PER_PAGE
             rows = (
-                (await session.execute(
-                    select(Question)
-                    .where(*filters)
-                    .order_by(*order_by)
-                    .offset(offset)
-                    .limit(QUESTIONS_PER_PAGE)
-                ))
+                (
+                    await session.execute(
+                        select(Question)
+                        .where(*filters)
+                        .order_by(*order_by)
+                        .offset(offset)
+                        .limit(QUESTIONS_PER_PAGE)
+                    )
+                )
                 .scalars()
                 .all()
             )
@@ -245,11 +253,14 @@ async def show_questions_page(
                 kb = get_admin_question_keyboard(q["id"], q["is_favorite"])
             elif list_type == "favorites":
                 status = "✅ Отвечен" if q["answer"] else "⏳ Ожидает"
-                body = f"⭐ <b>Вопрос #{q['id']}</b>\n\n{text}\n\n📅 {created} | {status}"
+                body = (
+                    f"⭐ <b>Вопрос #{q['id']}</b>\n\n{text}\n\n📅 {created} | {status}"
+                )
                 if q["answer"]:
                     body += f"\n\n💬 <b>Ответ:</b>\n{q['answer']}"
                 kb = get_favorite_question_keyboard(
-                    q["id"], is_answered=bool(q["answer"]))
+                    q["id"], is_answered=bool(q["answer"])
+                )
             else:  # answered
                 fav = "⭐ " if q["is_favorite"] else ""
                 body = (
@@ -263,7 +274,8 @@ async def show_questions_page(
             await message.answer(
                 f"📄 Навигация ({page + 1}/{total_pages})",
                 reply_markup=get_pagination_keyboard(
-                    page, total_pages, f"{list_type}_page"),
+                    page, total_pages, f"{list_type}_page"
+                ),
             )
         logger.info(f"{list_type} page {page + 1}/{total_pages} ({len(qs)})")
     except Exception as e:
@@ -278,7 +290,15 @@ async def show_questions_page(
 async def handle_clear_all_questions(callback: CallbackQuery) -> None:
     try:
         async with async_session() as session:
-            qs = (await session.execute(select(Question).where(Question.is_deleted.is_(False)))).scalars().all()
+            qs = (
+                (
+                    await session.execute(
+                        select(Question).where(Question.is_deleted.is_(False))
+                    )
+                )
+                .scalars()
+                .all()
+            )
             now = datetime.utcnow()
             for q in qs:
                 q.is_deleted = True
@@ -319,21 +339,46 @@ async def answered_command(message: Message) -> None:
 
 async def get_question_stats() -> Dict[str, int | float]:
     async with async_session() as session:
-        total = (await session.execute(select(func.count(Question.id)).
-                                       where(Question.is_deleted.is_(False)))).scalar() or 0
-        answered = (await session.execute(select(func.count(Question.id)).
-                                          where(Question.is_deleted.is_(False),
-                                                Question.answer.is_not(None)))).scalar() or 0
-        pending = (await session.execute(select(func.count(Question.id)).
-                                         where(Question.is_deleted.is_(False),
-                                               Question.answer.is_(None)))).scalar() or 0
-        favs = (await session.execute(select(func.count(Question.id)).
-                                      where(Question.is_deleted.is_(False),
-                                      Question.is_favorite.is_(True)))).scalar() or 0
-        deleted = (await session.execute(select(func.count(Question.id)).
-                                         where(Question.is_deleted.is_(True)))).scalar() or 0
+        total = (
+            await session.execute(
+                select(func.count(Question.id)).where(Question.is_deleted.is_(False))
+            )
+        ).scalar() or 0
+        answered = (
+            await session.execute(
+                select(func.count(Question.id)).where(
+                    Question.is_deleted.is_(False), Question.answer.is_not(None)
+                )
+            )
+        ).scalar() or 0
+        pending = (
+            await session.execute(
+                select(func.count(Question.id)).where(
+                    Question.is_deleted.is_(False), Question.answer.is_(None)
+                )
+            )
+        ).scalar() or 0
+        favs = (
+            await session.execute(
+                select(func.count(Question.id)).where(
+                    Question.is_deleted.is_(False), Question.is_favorite.is_(True)
+                )
+            )
+        ).scalar() or 0
+        deleted = (
+            await session.execute(
+                select(func.count(Question.id)).where(Question.is_deleted.is_(True))
+            )
+        ).scalar() or 0
     rate = round((answered / total * 100), 1) if total else 0.0
-    return {"total": total, "answered": answered, "pending": pending, "favs": favs, "deleted": deleted, "rate": rate}
+    return {
+        "total": total,
+        "answered": answered,
+        "pending": pending,
+        "favs": favs,
+        "deleted": deleted,
+        "rate": rate,
+    }
 
 
 @router.message(Command("stats"))
@@ -366,7 +411,11 @@ async def set_author_command(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
         current = await SettingsManager.get_author_name()
-        await message.answer(f"Текущее имя: <b>{current}</b>\n\nВведите команду:\n/set_author после нее новое имя")
+        await message.answer(
+            f"Текущее имя: <b>{current}</b>\n\n"
+            f"Введите команду:\n"
+            f"/set_author после нее новое имя"
+        )
         return
     new_name = parts[1].strip()
     if not new_name:
@@ -374,7 +423,9 @@ async def set_author_command(message: Message) -> None:
         return
     try:
         await SettingsManager.set_author_name(new_name)
-        await message.answer(SUCCESS_SETTING_UPDATED.format(setting="имя автора", value=new_name))
+        await message.answer(
+            SUCCESS_SETTING_UPDATED.format(setting="имя автора", value=new_name)
+        )
     except Exception as e:
         await message.answer(ERROR_SETTING_UPDATE)
         logger.error(f"set_author error: {e}")
@@ -388,7 +439,11 @@ async def set_info_command(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
         current = await SettingsManager.get_author_info()
-        await message.answer(f"Текущее описание:\n<b>{current}</b>\n\nВведите команду:\n/set_info после нее новое описание")
+        await message.answer(
+            f"Текущее описание:\n<b>{current}</b>\n\n"
+            f"Введите команду:\n"
+            f"/set_info после нее новое описание"
+        )
         return
     new_info = parts[1].strip()
     if not new_info:
@@ -396,7 +451,9 @@ async def set_info_command(message: Message) -> None:
         return
     try:
         await SettingsManager.set_author_info(new_info)
-        await message.answer(SUCCESS_SETTING_UPDATED.format(setting="описание канала", value=new_info))
+        await message.answer(
+            SUCCESS_SETTING_UPDATED.format(setting="описание канала", value=new_info)
+        )
     except Exception as e:
         await message.answer(ERROR_SETTING_UPDATE)
         logger.error(f"set_info error: {e}")
@@ -431,6 +488,7 @@ async def handle_backup_command(message: Message, bot: Bot, recipient_id: int) -
     status = await message.answer("🔄 Бекап...")
     try:
         from utils.telegram_backup import create_and_send_backup
+
         ok = await create_and_send_backup(recipient_id, bot)
         await status.edit_text("✅ Отправлено." if ok else "❌ Не удалось.")
     except Exception as e:
@@ -481,6 +539,7 @@ async def cmd_backup_info(message: Message) -> None:
         return
     try:
         from config import BACKUP_ENABLED, BACKUP_RECIPIENT_ID, BACKUP_STORAGE_DIR
+
         status = "✅ Включена" if BACKUP_ENABLED else "❌ Отключена"
         parts = ["📦 <b>Бекапы</b>", f"Статус: {status}"]
         if BACKUP_ENABLED:
@@ -509,6 +568,7 @@ async def health_command(message: Message):
     try:
         up = format_timedelta(uptime())
         from models.database import check_db_connection
+
         db_ok = await check_db_connection()
         status = (
             f"🩺 <b>Состояние бота</b>\n"
