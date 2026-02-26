@@ -143,7 +143,8 @@ SUCCESS_ANSWER_SENT: str = "✅ Ответ отправлен пользоват
 SUCCESS_ADDED_TO_FAVORITES: str = "⭐ Вопрос добавлен в избранное!"
 SUCCESS_REMOVED_FROM_FAVORITES: str = "⭐ Вопрос убран из избранного!"
 SUCCESS_QUESTION_DELETED: str = "🗑️ Вопрос удален!"
-SUCCESS_SETTING_UPDATED: str = "✅ Настройка обновлена!"
+SUCCESS_SETTING_UPDATED: str = "✅ Настройка «{setting}» обновлена: {value}"
+
 
 # Error Messages
 ERROR_MESSAGE_TOO_LONG: str = (
