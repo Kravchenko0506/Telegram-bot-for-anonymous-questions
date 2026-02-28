@@ -119,10 +119,10 @@ async def _handle_user_message(message: Message):
 async def _notify_user_blocked(message: Message):
     """Inform user they must use the button to send the next question."""
     blocked_message = """
-💬 <b>Ваш вопрос отправлен!</b>
+⚠️ **Ваше сообщение не было отправлено!**
 
-📨 Если хотите задать еще один вопрос, нажмите кнопку ниже.
-
+Вы уже задали вопрос ранее и ожидаете ответа.
+Чтобы задать новый вопрос, сначала нажмите кнопку ниже, а затем напишите вопрос заново.
 """
     keyboard = get_user_blocked_keyboard()
     await message.answer(blocked_message, reply_markup=keyboard)

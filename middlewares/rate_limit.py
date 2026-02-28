@@ -1,6 +1,5 @@
 """Rate limiting middleware for spam prevention."""
 
-from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Dict
 
@@ -30,10 +29,6 @@ class RateLimitMiddleware(BaseMiddleware):
         self.questions_per_hour = questions_per_hour
         self.cooldown_seconds = cooldown_seconds
 
-        self.user_questions: Dict[int, list[datetime]] = defaultdict(list)
-        self.user_last_question: Dict[int, datetime] = {}
-        self.user_has_sent_first: set[int] = set()
-
     async def __call__(
         self,
         handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
@@ -54,30 +49,32 @@ class RateLimitMiddleware(BaseMiddleware):
         if not await self._is_sending_question(user_id):
             return await handler(event, data)
 
-        now = datetime.now()
-        is_first = user_id not in self.user_has_sent_first
+        now = datetime.utcnow()
+
+        # Get user stats directly from DB
+        stats = await self._get_user_db_stats(user_id, now)
+        is_first = stats["total_questions"] == 0
 
         # Check cooldown (skip for first question)
         if not is_first:
-            remaining = await self._get_cooldown_remaining(user_id)
-            if remaining > 0:
-                await event.answer(ERROR_RATE_LIMIT.format(seconds=remaining))
-                logger.warning(f"Cooldown hit for user {user_id}")
-                return
+            cooldown_setting = await SettingsManager.get_rate_limit_cooldown()
+            last_time = stats["last_question_time"]
+            if last_time:
+                passed = (now - last_time).total_seconds()
+                remaining = max(0, int(cooldown_setting - passed))
+                if remaining > 0:
+                    await event.answer(ERROR_RATE_LIMIT.format(seconds=remaining))
+                    logger.warning(f"Cooldown hit for user {user_id}")
+                    return
 
         # Check hourly limit
-        if not await self._check_hourly_limit(user_id, now):
-            limit = await SettingsManager.get_rate_limit_per_hour()
+        limit = await SettingsManager.get_rate_limit_per_hour()
+        if stats["questions_last_hour"] >= limit:
             await event.answer(
                 f"❌ Лимит вопросов ({limit} в час) превышен. Попробуйте позже."
             )
             logger.warning(f"Hourly limit hit for user {user_id}")
             return
-
-        # Update tracking
-        self.user_last_question[user_id] = now
-        if is_first:
-            self.user_has_sent_first.add(user_id)
 
         return await handler(event, data)
 
@@ -87,31 +84,49 @@ class RateLimitMiddleware(BaseMiddleware):
 
         return await UserStateManager.can_send_question(user_id)
 
-    async def _get_cooldown_remaining(self, user_id: int) -> int:
-        """Get remaining cooldown seconds."""
-        last = self.user_last_question.get(user_id)
-        if not last:
-            return 0
+    async def _get_user_db_stats(self, user_id: int, now: datetime) -> dict:
+        """Fetch real-time statistics from the database for rate limiting."""
+        from sqlalchemy import select, func
+        from models.database import async_session
+        from models.questions import Question
 
-        cooldown = await SettingsManager.get_rate_limit_cooldown()
-        passed = (datetime.now() - last).total_seconds()
-        return max(0, int(cooldown - passed))
-
-    async def _check_hourly_limit(self, user_id: int, now: datetime) -> bool:
-        """Check and update hourly question limit."""
         hour_ago = now - timedelta(hours=1)
 
-        # Clean old entries
-        self.user_questions[user_id] = [
-            t for t in self.user_questions[user_id] if t > hour_ago
-        ]
+        async with async_session() as session:
+            # Check total count to know if this is their first ever question
+            total_query = select(func.count(Question.id)).where(
+                Question.user_id == user_id
+            )
+            total_questions = (await session.execute(total_query)).scalar() or 0
 
-        limit = await SettingsManager.get_rate_limit_per_hour()
-        if len(self.user_questions[user_id]) >= limit:
-            return False
+            # If no questions at all, skip other queries
+            if total_questions == 0:
+                return {
+                    "total_questions": 0,
+                    "last_question_time": None,
+                    "questions_last_hour": 0,
+                }
 
-        self.user_questions[user_id].append(now)
-        return True
+            # Time of the very last question (for cooldown)
+            last_q_query = (
+                select(Question.created_at)
+                .where(Question.user_id == user_id)
+                .order_by(Question.created_at.desc())
+                .limit(1)
+            )
+            last_question_time = (await session.execute(last_q_query)).scalar()
+
+            # How many questions in the last 1 hour (for hourly limit)
+            hour_query = select(func.count(Question.id)).where(
+                Question.user_id == user_id, Question.created_at >= hour_ago
+            )
+            questions_last_hour = (await session.execute(hour_query)).scalar() or 0
+
+        return {
+            "total_questions": total_questions,
+            "last_question_time": last_question_time,
+            "questions_last_hour": questions_last_hour,
+        }
 
 
 class CallbackRateLimitMiddleware(BaseMiddleware):
