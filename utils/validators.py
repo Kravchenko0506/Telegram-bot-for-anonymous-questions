@@ -1,8 +1,10 @@
 """Input validation and content moderation."""
 
 import html
+import json
 import re
-from typing import Dict, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 from config import (
     ERROR_MESSAGE_TOO_LONG,
@@ -25,12 +27,6 @@ class InputValidator:
     PHONE_PATTERN = re.compile(
         r"[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,5}[-\s\.]?[0-9]{1,5}"  # noqa: E501
     )
-    SPAM_PATTERNS = [
-        re.compile(r"(.)\1{5,}"),
-        re.compile(r"[A-Z\s]{20,}"),
-        re.compile(r"(viagra|cialis|casino|crypto|bitcoin)", re.IGNORECASE),
-        re.compile(r"(click here|buy now|limited offer)", re.IGNORECASE),
-    ]
     PROFANITY_WORDS = {"блять", "хуй", "пизда", "ебать", "сука"}
 
     @staticmethod
@@ -75,11 +71,6 @@ class InputValidator:
         )
         if len(text) > max_len:
             return False, ERROR_MESSAGE_TOO_LONG.format(max_length=max_len)
-
-        for pattern in InputValidator.SPAM_PATTERNS:
-            if pattern.search(text):
-                logger.warning(f"Spam pattern detected: {pattern.pattern}")
-                return False, "Вопрос похож на спам"
 
         urls = InputValidator.URL_PATTERN.findall(text)
         if len(urls) > 2:
@@ -129,12 +120,91 @@ class InputValidator:
 
 
 class ContentModerator:
-    """Content moderation and spam detection."""
+    """Content moderation and spam detection.
 
-    @staticmethod
-    def calculate_spam_score(text: str) -> float:
-        """Calculate spam probability score (0.0 to 1.0)."""
+    Loads spam keywords and regex patterns from an external JSON file.
+    Call load_spam_words() once at bot startup before processing messages.
+    """
+
+    _categories: list[dict[str, Any]] = []
+    _regex_patterns: list[tuple[re.Pattern, float]] = []
+    _loaded: bool = False
+
+    @classmethod
+    def load_spam_words(cls, path: str) -> None:
+        """Load spam word categories and regex patterns from JSON file.
+
+        Args:
+            path: path to JSON file relative to project root or absolute.
+
+        Raises:
+            FileNotFoundError: if file does not exist.
+            json.JSONDecodeError: if file contains invalid JSON.
+        """
+        file_path = Path(path)
+        if not file_path.is_absolute():
+            file_path = Path(__file__).resolve().parent.parent / path
+
+        raw: dict = json.loads(file_path.read_text(encoding="utf-8"))
+
+        cls._categories = []
+        cls._regex_patterns = []
+
+        for category_name, category_data in raw.items():
+            weight = float(category_data.get("weight", 0.1))
+
+            words = category_data.get("words", [])
+            if words:
+                cls._categories.append(
+                    {
+                        "name": category_name,
+                        "weight": weight,
+                        "words": [w.lower() for w in words],
+                    }
+                )
+
+            regex_dict = category_data.get("regex", {})
+            for pattern_name, pattern_str in regex_dict.items():
+                try:
+                    compiled = re.compile(pattern_str)
+                    cls._regex_patterns.append((compiled, weight))
+                except re.error as e:
+                    logger.error(
+                        f"invalid_regex_in_spam_config: pattern='{pattern_name}', "
+                        f"error='{e}'"
+                    )
+
+        total_words = sum(len(c["words"]) for c in cls._categories)
+        cls._loaded = True
+        logger.info(
+            f"Spam config loaded: {len(cls._categories)} categories, "
+            f"{total_words} words, {len(cls._regex_patterns)} regex patterns"
+        )
+
+    @classmethod
+    def calculate_spam_score(cls, text: str) -> float:
+        """Calculate spam probability score (0.0 to 1.0).
+
+        Checks loaded keyword categories and regex patterns.
+        Also applies built-in heuristics (caps ratio, punctuation, URLs,
+        repeated characters).
+        """
+        if not cls._loaded:
+            logger.warning("spam_words_not_loaded, using built-in heuristics only")
+
         score = 0.0
+        text_lower = text.lower()
+
+        # --- Keyword categories from JSON ---
+        for category in cls._categories:
+            for word in category["words"]:
+                if word in text_lower:
+                    score += category["weight"]
+                    break
+
+        for pattern, weight in cls._regex_patterns:
+            if pattern.search(text):
+                score += weight
 
         if re.search(r"(.)\1{4,}", text):
             score += 0.3
@@ -143,12 +213,6 @@ class ContentModerator:
             caps_ratio = sum(1 for c in text if c.isupper()) / len(text)
             if caps_ratio > 0.5:
                 score += 0.2
-
-        spam_keywords = ["заработок", "доход", "инвестиции", "криптовалюта"]
-        for keyword in spam_keywords:
-            if keyword.lower() in text.lower():
-                score += 0.1
-
         punct_ratio = sum(1 for c in text if c in "!?.,;:") / max(len(text), 1)
         if punct_ratio > 0.2:
             score += 0.1
@@ -158,7 +222,7 @@ class ContentModerator:
 
         return min(score, 1.0)
 
-    @staticmethod
-    def is_likely_spam(text: str, threshold: float = 0.5) -> bool:
-        """Check if text is likely spam."""
-        return ContentModerator.calculate_spam_score(text) >= threshold
+    @classmethod
+    def is_likely_spam(cls, text: str, threshold: float = 0.5) -> bool:
+        """Check if text is likely spam (score >= threshold)."""
+        return cls.calculate_spam_score(text) >= threshold

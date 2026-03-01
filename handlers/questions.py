@@ -151,11 +151,13 @@ async def _process_user_question(message: Message):
 
     question_text = InputValidator.sanitize_text(message.text, max_length)
 
-    if ContentModerator.is_likely_spam(question_text):
+    spam_score = ContentModerator.calculate_spam_score(question_text)
+
+    if spam_score >= 0.5:
         await message.answer(
             "❌ Ваш вопрос похож на спам. Пожалуйста, задайте настоящий вопрос."
         )
-        logger.warning(f"Spam detected from user {user_id}")
+        logger.warning(f"Spam blocked from user {user_id}, score={spam_score:.2f}")
         return
 
     _log_personal_data(question_text, user_id)
@@ -165,7 +167,9 @@ async def _process_user_question(message: Message):
         await message.answer(ERROR_DATABASE)
         return
 
-    await _notify_admin_about_question(question_id, question_text, message.bot)
+    await _notify_admin_about_question(
+        question_id, question_text, message.bot, spam_score
+    )
 
     await _confirm_question_to_user(message, question_id)
 
@@ -200,7 +204,9 @@ async def _save_question_to_db(question_text: str, user_id: int):
     return None
 
 
-async def _notify_admin_about_question(question_id: int, question_text: str, bot):
+async def _notify_admin_about_question(
+    question_id: int, question_text: str, bot, spam_score: float
+):
     """Notify admin about a newly submitted question."""
     try:
         sent_at = format_admin_time(datetime.utcnow())
@@ -211,7 +217,6 @@ async def _notify_admin_about_question(question_id: int, question_text: str, bot
 
 <i>Отправлено: {sent_at}</i>
 """
-        spam_score = ContentModerator.calculate_spam_score(question_text)
         if spam_score > 0.3:
             admin_message += f"\n<i>⚠️ Спам-рейтинг: {spam_score:.1%}</i>"
 

@@ -16,6 +16,7 @@ from middlewares.rate_limit import CallbackRateLimitMiddleware, RateLimitMiddlew
 from models.database import check_db_connection, close_db, init_db
 from utils.logging_setup import capture_error, get_logger, setup_logging
 from utils.periodic_tasks import start_periodic_tasks, stop_periodic_tasks
+from utils.validators import ContentModerator
 
 setup_logging()
 logger = get_logger(__name__)
@@ -141,6 +142,8 @@ async def main_flow() -> None:
     """Full initialization pipeline before entering polling loop."""
     logger.info("Initializing database")
     await init_db()
+
+    ContentModerator.load_spam_words("spam_words.json")
     bot, dp = await setup_bot()
     await setup_bot_menu(bot)
     await register_handlers(dp)
