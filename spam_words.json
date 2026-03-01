@@ -1,0 +1,79 @@
+{
+    "spam": {
+        "weight": 0.6,
+        "description": "Obvious commercial spam — unambiguous multi-word phrases only. Single common words are intentionally excluded to avoid false positives.",
+        "words": [
+            "buy now",
+            "click here",
+            "limited offer",
+            "fast cash",
+            "make money fast",
+            "earn cash now",
+            "work from home",
+            "online biz opportunity",
+            "double your income",
+            "act now",
+            "offer expires",
+            "no credit check",
+            "stock alert",
+            "viagra",
+            "cialis",
+            "casino",
+            "виагра",
+            "сиалис",
+            "казино",
+            "купить сейчас",
+            "нажмите здесь",
+            "жми сюда",
+            "только сегодня",
+            "быстрые деньги",
+            "лёгкий заработок",
+            "заработай быстро",
+            "без вложений",
+            "100% гарантия",
+            "гарантированный доход",
+            "схема заработка",
+            "пассивный доход",
+            "финансовая свобода",
+            "чудо-таблетки",
+            "работа на дому",
+            "удалённый заработок без опыта",
+            "разбогатей",
+            "секрет миллионеров",
+            "стань богатым быстро"
+        ]
+    },
+    "phishing": {
+        "weight": 0.4,
+        "description": "Phishing commands. Weight is 0.4 to warn admin instead of blocking, allowing legitimate stories about scams to pass.",
+        "words": [
+            "verify your account",
+            "confirm your identity",
+            "your account will be suspended",
+            "click to unlock",
+            "login required immediately",
+            "update your payment",
+            "billing information required",
+            "wire transfer",
+            "claim your prize",
+            "you have won",
+            "подтвердите личность",
+            "подтвердите аккаунт",
+            "ваш аккаунт будет удалён",
+            "войдите немедленно",
+            "обновите платёжные данные",
+            "заморожен счёт",
+            "ваши средства под угрозой",
+            "срочный перевод средств"
+        ]
+    },
+    "formatting": {
+        "weight": 0.3,
+        "description": "Flood and formatting abuse — detected via regex. No IGNORECASE (caps detection must be case-sensitive).",
+        "regex": {
+            "multi_exclaim": "!{3,}",
+            "currency_spam": "\\${2,}|€{2,}",
+            "percent_off": "\\d{2,3}%\\s?(off|скидк)"
+        }
+    }
+}
