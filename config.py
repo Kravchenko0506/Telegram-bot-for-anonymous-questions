@@ -20,10 +20,6 @@ def get_env_int(key: str, default: Optional[int] = None, required: bool = True) 
     """Get integer environment variable."""
     value = get_env_var(key, str(default) if default is not None else None, required)
 
-    if "=" in value:
-        value = value.split("=")[-1]
-    value = value.strip().strip('"').strip("'")
-
     try:
         return int(value)
     except ValueError:
