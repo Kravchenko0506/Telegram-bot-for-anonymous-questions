@@ -6,34 +6,27 @@ import logging
 from pathlib import Path
 from typing import AsyncGenerator
 
-from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-# Load environment variables
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
-# Database directory - will be created if doesn't exist
 DB_DIR = Path("/data")
 DB_DIR.mkdir(exist_ok=True)
 DB_PATH = DB_DIR / "bot_database.db"
 
 
-print(f"🗄️ Database path: {DB_PATH}")
-logger.info(f"Database path: {DB_PATH}")
+logger.info("Database path: %s", DB_PATH)
 
-# SQLite connection string
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
-# Create async engine
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for SQL query debugging
-    connect_args={"check_same_thread": False},  # Required for SQLite
+    echo=False,
+    connect_args={"check_same_thread": False},
 )
 
 
@@ -48,11 +41,9 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
-# Create async session factory
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-# Create declarative base for ORM models
 class Base(DeclarativeBase):
     pass
 
@@ -73,8 +64,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Initializes the database by creating all tables and setting up default values."""
     try:
-
-        print(f"🔧 Initializing database at: {DB_PATH}")
+        logger.info("Initializing database at: %s", DB_PATH)
 
         async with engine.begin() as conn:
             from models.admin_state import AdminState  # noqa: F401
@@ -88,10 +78,9 @@ async def init_db() -> None:
 
         if DB_PATH.exists():
             file_size = DB_PATH.stat().st_size
-            print(f"✅ Database ready: {DB_PATH} ({file_size} bytes)")
-            logger.info(f"Database initialized at {DB_PATH}")
+            logger.info("Database initialized at %s (%d bytes)", DB_PATH, file_size)
         else:
-            print(f"❌ Database file not found at {DB_PATH}")
+            logger.warning("Database file not found at %s", DB_PATH)
 
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")

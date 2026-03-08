@@ -30,6 +30,8 @@ from config import (
 )
 from utils.time_helper import ADMIN_TZ
 
+logger = logging.getLogger(__name__)
+
 
 class ColoredFormatter(logging.Formatter):
     """Formatter with color support for console output."""
@@ -100,10 +102,10 @@ def setup_sentry() -> bool:
         sentry_sdk.set_user({"id": str(ADMIN_ID), "role": "admin"})
         sentry_sdk.set_tag("component", "telegram_bot")
 
-        print("✅ Sentry initialized successfully")
+        logger.info("Sentry initialized successfully")
         return True
     except Exception as e:
-        print(f"❌ Failed to initialize Sentry: {e}")
+        logger.error("Failed to initialize Sentry: %s", e)
         return False
 
 
@@ -133,8 +135,6 @@ def setup_logging() -> None:
 
     _configure_logger_levels()
     sentry_initialized = setup_sentry()
-
-    logger = logging.getLogger(__name__)
     logger.info("=" * 50)
     logger.info("Logging system initialized")
     logger.info(f" Log level: {LOG_LEVEL}")
