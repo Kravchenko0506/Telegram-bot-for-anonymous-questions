@@ -225,8 +225,3 @@ class ContentModerator:
         score += url_count * 0.1
 
         return min(score, 1.0)
-
-    @classmethod
-    def is_likely_spam(cls, text: str, threshold: float = 0.5) -> bool:
-        """Check if text is likely spam (score >= threshold)."""
-        return cls.calculate_spam_score(text) >= threshold
