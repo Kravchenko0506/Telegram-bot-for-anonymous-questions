@@ -5,7 +5,7 @@ responses to users.
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aiogram import Router
 from aiogram.types import CallbackQuery, Message
@@ -209,7 +209,7 @@ async def _notify_admin_about_question(
 ):
     """Notify admin about a newly submitted question."""
     try:
-        sent_at = format_admin_time(datetime.utcnow())
+        sent_at = format_admin_time(datetime.now(timezone.utc))
         admin_message = f"""
 ❓ <b>Новый анонимный вопрос #{question_id}:</b>
 
@@ -252,7 +252,10 @@ async def _handle_admin_reply(message: Message):
 
     answer_text = InputValidator.sanitize_text(message.text.strip())
 
-    is_valid, error_message = InputValidator.validate_answer(answer_text)
+    max_answer_len = await SettingsManager.get_max_answer_length()
+    is_valid, error_message = InputValidator.validate_answer(
+        answer_text, max_length=max_answer_len
+    )
 
     if not is_valid:
         await message.answer(f"❌ {error_message}")
@@ -277,7 +280,7 @@ async def _process_admin_answer(question_id: int, answer_text: str, message: Mes
                 return
 
             question.answer = answer_text
-            question.answered_at = datetime.utcnow()
+            question.answered_at = datetime.now(timezone.utc)
             await session.commit()
 
             success = await _send_answer_to_user(question, answer_text, message.bot)

@@ -195,6 +195,10 @@ def validate_config() -> bool:
         errors.append("Rate limit must be positive")
     if RATE_LIMIT_COOLDOWN_SECONDS <= 0:
         errors.append("Cooldown must be positive")
+    if BACKUP_ENABLED and BACKUP_RECIPIENT_ID <= 0:
+        errors.append(
+            "BACKUP_RECIPIENT_ID must be a positive integer when backup is enabled"
+        )
 
     if errors:
         raise ValueError(
@@ -202,13 +206,6 @@ def validate_config() -> bool:
         )
     return True
 
-
-if __name__ != "__main__":
-    try:
-        validate_config()
-    except ValueError as e:
-        print(f"❌ Configuration Error:\n{e}")
-        raise
 
 # Network Configuration
 POLLING_TIMEOUT = 300
@@ -231,3 +228,10 @@ BACKUP_KEEP_LOCAL_COUNT: int = get_env_int(
 BACKUP_STORAGE_DIR: str = get_env_var(
     "BACKUP_STORAGE_DIR", default="./data/backups", required=False
 )
+
+if __name__ != "__main__":
+    try:
+        validate_config()
+    except ValueError as e:
+        print(f"❌ Configuration Error:\n{e}")
+        raise

@@ -1,6 +1,6 @@
 """User state management for question flow control."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import BigInteger, Column, DateTime, String, and_, select
 from sqlalchemy.sql import func
@@ -63,14 +63,14 @@ class UserStateManager:
                 if user_state:
                     user_state.state = state
                     if state == UserStateManager.STATE_QUESTION_SENT:
-                        user_state.last_question_at = datetime.utcnow()
+                        user_state.last_question_at = datetime.now(timezone.utc)
                         user_state.questions_count += 1
                 else:
                     user_state = UserState(
                         user_id=user_id,
                         state=state,
                         last_question_at=(
-                            datetime.utcnow()
+                            datetime.now(timezone.utc)
                             if state == UserStateManager.STATE_QUESTION_SENT
                             else None
                         ),
@@ -114,7 +114,7 @@ class UserStateManager:
         """Reset states to idle for users inactive for specified hours."""
         try:
             async with async_session() as session:
-                cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+                cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
 
                 stmt = select(UserState).where(
                     and_(

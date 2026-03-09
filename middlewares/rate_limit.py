@@ -1,6 +1,6 @@
 """Rate limiting middleware for spam prevention."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
@@ -49,7 +49,8 @@ class RateLimitMiddleware(BaseMiddleware):
         if not await self._is_sending_question(user_id):
             return await handler(event, data)
 
-        now = datetime.utcnow()
+        # Naive UTC — matches naive datetime stored in SQLite
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Get user stats directly from DB
         stats = await self._get_user_db_stats(user_id, now)
@@ -151,7 +152,7 @@ class CallbackRateLimitMiddleware(BaseMiddleware):
         if user_id == ADMIN_ID:
             return await handler(event, data)
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         last = self.user_last_callback.get(user_id)
 
         if last and (now - last).total_seconds() < self.cooldown_seconds:

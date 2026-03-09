@@ -82,15 +82,22 @@ class InputValidator:
         return True, None
 
     @staticmethod
-    def validate_answer(text: str) -> Tuple[bool, Optional[str]]:
+    def validate_answer(
+        text: str, max_length: Optional[int] = None
+    ) -> Tuple[bool, Optional[str]]:
         """Validate answer text."""
         if not text or not text.strip():
             return False, "Ответ не может быть пустым"
 
-        if len(text) > MAX_ANSWER_LENGTH:
+        max_len = (
+            max_length
+            if isinstance(max_length, int) and max_length > 0
+            else MAX_ANSWER_LENGTH
+        )
+        if len(text) > max_len:
             return (
                 False,
-                f"Ответ слишком длинный (максимум {MAX_ANSWER_LENGTH} символов)",
+                f"Ответ слишком длинный (максимум {max_len} символов)",
             )
 
         if len(text.strip()) < 2:
@@ -112,9 +119,6 @@ class InputValidator:
             "phones": InputValidator.PHONE_PATTERN.findall(text),
             "urls": InputValidator.URL_PATTERN.findall(text),
         }
-
-        if any(data.values()):
-            logger.warning(f"Personal data detected: {list(data.keys())}")
 
         return data
 

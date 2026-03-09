@@ -1,6 +1,6 @@
 """Admin state management for question answering mode."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Union
 
 from aiogram import Router
@@ -114,7 +114,7 @@ async def handle_admin_answer(message: Message) -> bool:
                 return True
 
             question.answer = answer_text
-            question.answered_at = datetime.utcnow()
+            question.answered_at = datetime.now(timezone.utc)
             await session.commit()
 
         try:

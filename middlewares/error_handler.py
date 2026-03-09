@@ -1,6 +1,6 @@
 """Error handling middleware for the bot."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Dict, Union
 
 from aiogram import BaseMiddleware
@@ -80,7 +80,7 @@ class ErrorHandlerMiddleware(BaseMiddleware):
         self, event: Union[Update, Message, CallbackQuery]
     ) -> Dict[str, Any]:
         """Extract user/message info from event."""
-        context = {"timestamp": datetime.now().isoformat()}
+        context = {"timestamp": datetime.now(timezone.utc).isoformat()}
 
         user = None
         if isinstance(event, Message):

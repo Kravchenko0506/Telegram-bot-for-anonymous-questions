@@ -2,11 +2,12 @@
 
 import asyncio
 import os
+import re
 import shutil
 import sqlite3
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from aiogram import Bot
@@ -37,7 +38,7 @@ class BackupManager:
                 raise FileNotFoundError(f"Database file {self.db_path} not found!")
 
             with tempfile.TemporaryDirectory() as tmp_dir:
-                timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+                timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
                 backup_path = os.path.join(tmp_dir, f"backup_{timestamp}.db")
                 zip_filename = f"bot_backup_{timestamp}.zip"
                 zip_path = os.path.join(tmp_dir, zip_filename)
@@ -96,7 +97,9 @@ class BackupManager:
         """Create backup metadata file."""
         try:
             db_stats = self._get_database_stats()
-            created_at = format_admin_time(datetime.utcnow(), "%d.%m.%Y %H:%M:%S")
+            created_at = format_admin_time(
+                datetime.now(timezone.utc), "%d.%m.%Y %H:%M:%S"
+            )
             return f""" Bot Backup Information
 Created: {created_at}
 Database: {os.path.basename(self.db_path)}
@@ -108,7 +111,8 @@ Database Statistics:
 Keep this backup file safe!
 """
         except Exception as e:
-            return f"Backup created: {format_admin_time(datetime.utcnow())}\nError: {e}"
+            created = format_admin_time(datetime.now(timezone.utc))
+            return f"Backup created: {created}\nError: {e}"
 
     def _get_database_stats(self) -> str:
         """Get table statistics from database."""
@@ -120,8 +124,13 @@ Keep this backup file safe!
                 ).fetchall()
                 for (table,) in tables:
                     try:
+                        # Whitelist: only alphanumeric and underscores
+                        # are allowed in table names
+                        if not re.match(r"^[A-Za-z0-9_]+$", table):
+                            stats.append(f"• {table}: skipped (invalid name)")
+                            continue
                         count = conn.execute(
-                            f"SELECT COUNT(*) FROM {table}"
+                            f'SELECT COUNT(*) FROM "{table}"'  # Quoted identifier — safe
                         ).fetchone()[0]
                         stats.append(f"• {table}: {count:,} records")
                     except Exception:
@@ -181,7 +190,7 @@ Keep this backup file safe!
 
 📁 File: {filename}
 📊 Size: {self._format_size(file_size)}
-📅 Created: {format_admin_time(datetime.utcnow())} """
+📅 Created: {format_admin_time(datetime.now(timezone.utc))} """
 
             await bot.send_document(
                 chat_id=recipient_id,

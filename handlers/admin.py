@@ -4,7 +4,7 @@ bot settings, statistics, and backup."""
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 from aiogram import Bot, Router
@@ -96,7 +96,7 @@ async def handle_question_action(
             return True
         if action == "delete":
             question.is_deleted = True
-            question.deleted_at = datetime.utcnow()
+            question.deleted_at = datetime.now(timezone.utc)
             await session.commit()
             await callback.answer(SUCCESS_QUESTION_DELETED)
             try:
@@ -299,7 +299,7 @@ async def handle_clear_all_questions(callback: CallbackQuery) -> None:
                 .scalars()
                 .all()
             )
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             for q in qs:
                 q.is_deleted = True
                 q.deleted_at = now
@@ -478,10 +478,6 @@ async def settings_command(message: Message) -> None:
     except Exception as e:
         await message.answer("❌ Ошибка настроек")
         logger.error(f"settings error: {e}")
-
-
-def get_questions_per_page() -> int:
-    return QUESTIONS_PER_PAGE
 
 
 async def handle_backup_command(message: Message, bot: Bot, recipient_id: int) -> None:

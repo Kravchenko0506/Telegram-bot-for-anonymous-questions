@@ -119,7 +119,7 @@ def setup_logging() -> None:
     root_logger.handlers.clear()
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, LOG_LEVEL))
-    console_handler.setFormatter(ColoredFormatter(LOG_FORMAT))
+    console_handler.setFormatter(TzFormatter(LOG_FORMAT))
     root_logger.addHandler(console_handler)
 
     if LOG_TO_FILE:
